@@ -109,6 +109,22 @@
   }
   .icon-btn:hover { background: var(--border); }
 
+  .zone-tabs {
+    display: flex; align-items: center; gap: 2px; flex-wrap: wrap;
+    padding: 0 28px; background: var(--surface-1); border-bottom: 1px solid var(--border); overflow-x: auto;
+  }
+  .zone-tab {
+    display: flex; align-items: center; gap: 8px; padding: 14px 14px; color: var(--text-secondary);
+    font-size: 13.5px; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap;
+  }
+  .zone-tab .dot {
+    width: 18px; height: 18px; border-radius: 5px; background: var(--page-plane); display: flex;
+    align-items: center; justify-content: center; font-size: 10.5px; font-weight: 800; color: var(--text-muted); flex-shrink: 0;
+  }
+  .zone-tab:hover { color: var(--text-primary); }
+  .zone-tab.active { color: var(--text-primary); border-bottom-color: var(--series-1); }
+  .zone-tab.active .dot { background: var(--series-1); color: #fff; }
+
   .filter-bar {
     display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
     padding: 16px 28px; background: var(--surface-1); border-bottom: 1px solid var(--border);
@@ -123,6 +139,8 @@
 
   main { max-width: 1320px; margin: 0 auto; padding: 26px 28px 70px; }
   .block { margin-bottom: 40px; }
+  .zone-panel { display: none; }
+  .zone-panel.active { display: block; }
   h2.block-title {
     font-size: 19px; font-weight: 700; margin: 0 0 16px; color: var(--text-primary);
     display: flex; align-items: center; gap: 10px;
@@ -151,7 +169,7 @@
   .kpi-donut-wrap { display: flex; align-items: center; gap: 14px; margin-top: 8px; }
   .kpi-donut-wrap canvas { max-width: 74px; max-height: 74px; }
 
-  /* ---------- Zone 2 ---------- */
+  /* ---------- Zone 5 (exceptions) ---------- */
   .exception-list { display: flex; flex-direction: column; gap: 11px; }
   .exception-row {
     display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
@@ -180,9 +198,10 @@
   .data-table th.sorted { color: var(--text-primary); }
   .data-table th .sort-arrow { font-size: 11px; margin-left: 3px; opacity: .6; }
   .data-table td { padding: 16px 18px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .data-table tbody tr:hover { background: var(--page-plane); }
   .data-table tr.flagged td:first-child { box-shadow: inset 4px 0 0 var(--critical); }
   .veh-cell { display:flex; align-items:center; gap:8px; white-space: nowrap; }
-  .bu-badge { background: var(--series-1); color: #fff; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 6px; }
+  .bu-badge { background: color-mix(in srgb, var(--series-1) 12%, transparent); color: var(--series-1); font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 6px; }
 
   .bar-track { position: relative; width: 130px; height: 16px; background: var(--page-plane); border-radius: 5px; overflow: visible; }
   .bar-fill { position: absolute; left:0; top:0; height: 100%; border-radius: 5px; }
@@ -192,7 +211,8 @@
   .bar-diverging .mid-line { position:absolute; left:50%; top:-3px; width:1px; height:22px; background: var(--baseline); }
   .bar-diverging .seg { position:absolute; top:0; height:100%; }
   .stack-mini { position: relative; display:flex; width: 110px; height: 16px; border-radius: 5px; overflow: visible; }
-  .cell-label { font-size: 13.5px; color: var(--text-secondary); margin-top: 4px; white-space: nowrap; font-weight: 600; }
+  .cell-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; white-space: nowrap; font-weight: 500; }
+  .text-primary-strong { font-size: 18px; font-weight: 800; color: var(--text-primary); }
   .cell-flex { display:flex; flex-direction: column; gap: 4px; }
   .foot-note { font-size: 13px; color: var(--text-muted); margin-top: 12px; padding: 0 8px; line-height: 1.6; }
 
@@ -202,6 +222,7 @@
   .verdict.bad { color: var(--critical); background: color-mix(in srgb, var(--critical) 14%, transparent); }
   .verdict.warn { color: #8a6200; background: color-mix(in srgb, var(--warning) 25%, transparent); }
   .verdict.muted { color: var(--text-muted); background: var(--page-plane); }
+  .verdict.critical { color: #fff; background: var(--critical); font-weight: 800; }
   .pill-row { display:flex; gap:7px; margin-top:3px; flex-wrap:wrap; }
 
   .comp-bar { position: relative; display:flex; width: 150px; height: 16px; border-radius: 5px; overflow: hidden; background: var(--page-plane); }
@@ -209,7 +230,7 @@
   .comp-legend .dot { width:7px; height:7px; border-radius:2px; display:inline-block; margin-right:3px; }
   .comp-total { font-size: 13.5px; color: var(--text-primary); font-weight:700; margin-top:1px; }
 
-  /* ---------- Zone 3b: focus charts ---------- */
+  /* ---------- Zone 2: focus charts ---------- */
   .focus-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 18px; }
   .chart-card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
   .chart-card h3 { font-size: 15px; margin: 0 0 4px; font-weight: 700; }
@@ -285,6 +306,14 @@
   </div>
 </header>
 
+<div class="zone-tabs" id="zoneTabs">
+  <div class="zone-tab active" data-zone="zonePanel1"><span class="dot">1</span> ภาพรวมประจำเดือน</div>
+  <div class="zone-tab" data-zone="zonePanel2"><span class="dot">2</span> กราฟเจาะลึก</div>
+  <div class="zone-tab" data-zone="zonePanel3"><span class="dot">3</span> ตารางรายเส้นทาง</div>
+  <div class="zone-tab" data-zone="zonePanel4"><span class="dot">4</span> รายการซ่อม</div>
+  <div class="zone-tab" data-zone="zonePanel5"><span class="dot">5</span> จุดที่ควรเฝ้าระวัง</div>
+</div>
+
 <div class="filter-bar">
   <div><label for="ymSelect">เดือน-ปี</label><select id="ymSelect"></select></div>
   <div><label for="buSelect">หน่วยธุรกิจ (BU)</label><select id="buSelect"></select></div>
@@ -295,7 +324,7 @@
 <div id="app" style="display:none;">
 <main>
 
-  <section class="block">
+  <section class="block zone-panel active" id="zonePanel1">
     <h2 class="block-title"><span class="zone-tag">ZONE 1</span> ภาพรวมประจำเดือน <span class="n" id="ovTitle"></span></h2>
     <div class="kpi-grid">
       <div class="kpi-card">
@@ -334,35 +363,8 @@
     </div>
   </section>
 
-  <section class="block">
-    <h2 class="block-title"><span class="zone-tag">ZONE 2</span> จุดที่ควรเฝ้าระวัง <span class="n" id="excTitle"></span></h2>
-    <div class="exception-list" id="exceptionList"></div>
-  </section>
-
-  <section class="block">
-    <h2 class="block-title"><span class="zone-tag">ZONE 3</span> ตารางประสิทธิภาพรายเส้นทาง (Route ID) <span class="n" id="vehTitle"></span></h2>
-    <div class="card full-table-wrap">
-      <table class="data-table" id="unifiedTable">
-        <thead>
-          <tr>
-            <th data-key="routeId">Route ID <span class="sort-arrow">↕</span></th>
-            <th data-key="liters">ยอดขายลิตร (เทียบปีก่อน / เป้า) <span class="sort-arrow">↕</span></th>
-            <th data-key="fuelDiffPct">น้ำมันขาด/เกิน (%) <span class="sort-arrow">↕</span></th>
-            <th data-key="gp">กำไรขั้นต้นรวม <span class="sort-arrow">↕</span></th>
-            <th data-key="gpPerLiter">ต้นทุน + กำไรขั้นต้น ต่อลิตร <span class="sort-arrow">↕</span></th>
-            <th data-key="repair">ค่าซ่อม <span class="sort-arrow">↕</span></th>
-            <th data-key="fuelRate">อัตราการใช้น้ำมัน (เทียบเป้า) <span class="sort-arrow">↕</span></th>
-            <th data-key="cashPct">เงินสด : เงินเชื่อ (เทียบเป้า) <span class="sort-arrow">↕</span></th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <div class="foot-note">แถวคือ 1 Route ID · ชื่อรถใต้ Route ID = รถที่วิ่งเส้นทางนี้ในเดือนที่เลือก (สลับรถได้ตามจริง) · แถวที่มีแถบสีแดงด้านซ้าย = เส้นทางนี้ติดอยู่ในรายการเฝ้าระวัง (Zone 2) อย่างน้อย 1 ข้อ · แถว "ไม่มี Route ID" = ยังไม่ได้กรอก Route ID ในชีตต้นทาง ระบบใช้ชื่อรถแทนไปก่อน</div>
-    </div>
-  </section>
-
-  <section class="block">
-    <h2 class="block-title"><span class="zone-tag">ZONE 3</span> กราฟเจาะลึกที่ตารางแทนไม่ได้</h2>
+  <section class="block zone-panel" id="zonePanel2">
+    <h2 class="block-title"><span class="zone-tag">ZONE 2</span> กราฟเจาะลึกที่ตารางแทนไม่ได้</h2>
     <div class="focus-grid">
       <div class="chart-card">
         <h3>ความสัมพันธ์ ค่าซ่อม vs อัตราการใช้น้ำมัน</h3>
@@ -392,7 +394,26 @@
     </div>
   </section>
 
-  <section class="block">
+  <section class="block zone-panel" id="zonePanel3">
+    <h2 class="block-title"><span class="zone-tag">ZONE 3</span> ตารางประสิทธิภาพรายเส้นทาง (Route ID) <span class="n" id="vehTitle"></span></h2>
+    <div class="card full-table-wrap">
+      <table class="data-table" id="unifiedTable">
+        <thead>
+          <tr>
+            <th data-key="routeId">Route ID <span class="sort-arrow">↕</span></th>
+            <th data-key="liters">ยอดขาย &amp; ผลต่างน้ำมัน <span class="sort-arrow">↕</span></th>
+            <th data-key="gp">ผลประกอบการกำไร <span class="sort-arrow">↕</span></th>
+            <th data-key="repair">ค่าซ่อม &amp; ประสิทธิภาพน้ำมัน <span class="sort-arrow">↕</span></th>
+            <th data-key="cashPct" style="text-align:center;">เงินสด : เงินเชื่อ (เทียบเป้า) <span class="sort-arrow">↕</span></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="foot-note">แถวคือ 1 Route ID · ชื่อรถใต้ Route ID = รถที่วิ่งเส้นทางนี้ในเดือนที่เลือก (สลับรถได้ตามจริง) · แถวที่มีแถบสีแดงด้านซ้าย = เส้นทางนี้ติดอยู่ในรายการเฝ้าระวัง (Zone 5) อย่างน้อย 1 ข้อ · แถว "ไม่มี Route ID" = ยังไม่ได้กรอก Route ID ในชีตต้นทาง ระบบใช้ชื่อรถแทนไปก่อน</div>
+    </div>
+  </section>
+
+  <section class="block zone-panel" id="zonePanel4">
     <h2 class="block-title"><span class="zone-tag">ZONE 4</span> รายการซ่อมประจำเดือน (จากชีตซ่อมบำรุง) <span class="n" id="repairTitle"></span></h2>
     <div id="repairZoneStatus" style="font-size:13px;color:var(--text-muted);margin-bottom:12px;"></div>
 
@@ -445,6 +466,11 @@
     </div>
     <div id="repairAccordionWrap" style="display:none;"></div>
     <div class="foot-note">"ประเภทงาน" (อะไหล่ / ค่าแรง / ยาง) จัดหมวดอัตโนมัติจากคำในชื่อรายการซ่อม อาจไม่ตรง 100% — ถ้าต้องการความแม่นยำเต็มที่ แนะนำเพิ่มคอลัมน์ "ประเภทงาน" ในชีต "ซ่อมบำรุง" โดยตรง</div>
+  </section>
+
+  <section class="block zone-panel" id="zonePanel5">
+    <h2 class="block-title"><span class="zone-tag">ZONE 5</span> จุดที่ควรเฝ้าระวัง <span class="n" id="excTitle"></span></h2>
+    <div class="exception-list" id="exceptionList"></div>
   </section>
 
 </main>
@@ -761,6 +787,16 @@ function initFilters() {
     renderAll();
   });
 
+  document.querySelectorAll('.zone-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.zone-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.zone-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(tab.getAttribute('data-zone')).classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+
   const repairSearchInput = document.getElementById('repairSearchInput');
   repairSearchInput.addEventListener('input', () => { STATE.repairSearch = repairSearchInput.value.trim().toLowerCase(); renderRepairZone(); });
   document.getElementById('repairTagFilter').addEventListener('change', (e) => { STATE.repairTag = e.target.value; renderRepairZone(); });
@@ -920,7 +956,7 @@ function renderAll() {
 }
 
 // ---------------------------------------------------------------------
-// Zone 2 — exception rules
+// Zone 5 — exception rules
 // ---------------------------------------------------------------------
 function renderExceptions(rowData, c) {
   const alerts = [];
@@ -992,12 +1028,35 @@ function barCellHtml(value, max, color, label) {
   const w = max > 0 ? Math.max(2, Math.min(100, 100 * Math.abs(value) / max)) : 0;
   return `<div class="cell-flex"><div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${color}"></div></div><div class="cell-label">${label}</div></div>`;
 }
-function divergingCellHtml(value, maxAbs, c, unit = 'ล.', decimals = 1, withinTol = null) {
-  const half = maxAbs > 0 ? Math.max(1, Math.min(50, 50 * Math.abs(value) / maxAbs)) : 0;
-  const color = withinTol === null ? (value < 0 ? c.critical : c.good) : (withinTol ? c.good : c.critical);
-  const style = value < 0 ? `right:50%;width:${half}%;background:${color}` : `left:50%;width:${half}%;background:${color}`;
-  const badge = withinTol === null ? '' : (withinTol ? ' <span title="อยู่ในเป้า">✓</span>' : ' <span title="นอกเป้า">✗</span>');
-  return `<div class="cell-flex"><div class="bar-diverging"><div class="mid-line"></div><div class="seg" style="${style}"></div></div><div class="cell-label">${fmtSigned(value, decimals)}${unit}${badge}</div></div>`;
+// Merged "ยอดขาย & ผลต่างน้ำมัน (Sales & Fuel Variance)" cell — combines the
+// liters-sold cell and the fuel-diff-% cell into one, per the approved mockup.
+// No bars/markers (dropped for a cleaner scan); the fuel-variance badge uses 3
+// tiers off FUEL_DIFF_TOLERANCE_PCT: within it is "ปกติ" (green ✓), up to 2x it
+// is "เฝ้าระวัง" (orange ⚠), beyond that is "วิกฤต" (solid red ⚠️). The 2x
+// multiplier is a reasonable step beyond the configured tolerance and can be
+// tuned in FUEL_DIFF_CRITICAL_MULTIPLIER below without touching the Config tab.
+const FUEL_DIFF_CRITICAL_MULTIPLIER = 2;
+// Only the genuinely severe tier gets a solid badge+icon; ปกติ/เฝ้าระวัง render
+// as plain semantic-colored text (per the low-noise redesign) so the table only
+// pulls the eye where something actually needs attention.
+function fuelVarianceBadgeHtml(fuelDiffPct, tolerancePct) {
+  const absVal = Math.abs(fuelDiffPct);
+  const text = fmtSigned(fuelDiffPct, 2) + '%';
+  if (absVal <= tolerancePct) return `<span style="color:var(--good);font-weight:700;">${text}</span>`;
+  if (absVal <= tolerancePct * FUEL_DIFF_CRITICAL_MULTIPLIER) return `<span style="color:var(--series-2);font-weight:700;">${text}</span>`;
+  return `<span class="verdict critical">⚠️ ${text}</span>`;
+}
+function salesCellHtml(liters, litersPrev, targetLiters, targetAchievePct, pctYoY, fuelDiffPct, c) {
+  const yoyText = pctYoY === null
+    ? `<span style="color:var(--text-muted);">ไม่มีข้อมูลปีก่อน</span>`
+    : `<span style="color:${pctYoY >= 0 ? 'var(--good)' : 'var(--critical)'};font-weight:600;">${pctYoY >= 0 ? '▲' : '▼'} ${fmt(Math.abs(pctYoY), 1)}% จากปีก่อน</span>`;
+  const targetText = targetAchievePct === null
+    ? `<span style="color:var(--text-muted);">ไม่มีเป้า</span>`
+    : `<span style="color:${targetAchievePct >= 100 ? 'var(--good)' : (targetAchievePct >= 80 ? 'var(--series-2)' : 'var(--critical)')};font-weight:600;">${fmt(targetAchievePct, 1)}% ของเป้า</span>`;
+  return `<div class="cell-flex">
+    <div class="stack-row"><span class="text-primary-strong">${fmt(liters)} ลิตร</span> ${fuelVarianceBadgeHtml(fuelDiffPct, FUEL_DIFF_TOLERANCE_PCT)}</div>
+    <div class="cell-label">${yoyText} &nbsp;·&nbsp; ${targetText}</div>
+  </div>`;
 }
 function targetBulletCellHtml(actual, target, max, color, unit = '', decimals = 2) {
   const w = max > 0 ? Math.max(2, Math.min(100, 100 * actual / max)) : 0;
@@ -1006,47 +1065,49 @@ function targetBulletCellHtml(actual, target, max, color, unit = '', decimals = 
   const targetLabel = (target !== null && target !== undefined) ? ` · เป้า ${fmt(target, decimals)}${unit}` : ' · ไม่มีเป้า';
   return `<div class="cell-flex"><div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${color}"></div>${marker}</div><div class="cell-label">${fmt(actual, decimals)}${unit}${targetLabel}</div></div>`;
 }
-function costProfitCellHtml(costPerLiter, gpPerLiter, c) {
-  const total = costPerLiter + gpPerLiter;
-  const costW = total > 0 ? Math.max(0, Math.min(100, 100 * costPerLiter / total)) : 0;
-  const gpW = total > 0 ? Math.max(0, 100 - costW) : 0;
+// Merged "ผลประกอบการกำไร (Financials)" cell — combines total gross profit with
+// the per-liter price/cost/profit breakdown as plain text (no bar/sparkline, per
+// the approved mockup, to keep the table clean). กำไร/ลิตร is highlighted green
+// when healthy (>= 1.50 บ./ล., adjustable) or orange when thin but still positive;
+// red if the route is actually losing money per liter.
+const GP_PER_LITER_HEALTHY = 1.50;
+function financialsCellHtml(gp, costPerLiter, gpPerLiter) {
+  const sellPerLiter = costPerLiter + gpPerLiter;
+  const gplColor = gpPerLiter < 0 ? 'var(--critical)' : (gpPerLiter >= GP_PER_LITER_HEALTHY ? 'var(--good)' : 'var(--series-2)');
   return `<div class="cell-flex">
-    <div class="comp-bar"><div style="width:${costW}%;background:${c.s2}"></div><div style="width:${gpW}%;background:${c.s3}"></div></div>
-    <div class="comp-total">${fmt(total, 2)} บ./ล. รวม</div>
-    <div class="comp-legend"><span><i class="dot" style="background:${c.s2}"></i>ต้นทุน ${fmt(costPerLiter, 2)}</span><span><i class="dot" style="background:${c.s3}"></i>กำไร ${fmt(gpPerLiter, 2)}</span></div>
+    <div class="text-primary-strong">฿${fmt(gp)}</div>
+    <div class="cell-label" style="white-space:normal;max-width:260px;">ราคาขาย/ลิตร ${fmt(sellPerLiter, 2)} &nbsp;|&nbsp; ต้นทุน/ลิตร ${fmt(costPerLiter, 2)} &nbsp;|&nbsp; กำไร/ลิตร <b style="color:${gplColor}">${fmt(gpPerLiter, 2)}</b></div>
   </div>`;
 }
+// Merged "ค่าซ่อม & ประสิทธิภาพน้ำมัน (Maintenance & Efficiency)" cell — no
+// bar/sparkline (per the approved mockup). ยอดค่าซ่อม > ฿10,000 is bolded red
+// with a ⚠️ icon; the fuel-rate line colors green/red against its per-route
+// target when one exists.
+const REPAIR_COST_WARN_THB = 10000;
+function maintenanceCellHtml(repair, fuelRate, targetFuelRate) {
+  const hot = repair > REPAIR_COST_WARN_THB;
+  const repairLine = hot
+    ? `<div><span class="verdict critical">⚠️ ฿${fmt(repair)}</span></div>`
+    : `<div class="text-primary-strong">฿${fmt(repair)}</div>`;
+  let fuelLine;
+  if (targetFuelRate !== null && targetFuelRate !== undefined && targetFuelRate > 0) {
+    const good = fuelRate >= targetFuelRate;
+    fuelLine = `<div class="cell-label">อัตราสิ้นเปลือง <b style="color:${good ? 'var(--good)' : 'var(--critical)'}">${fmt(fuelRate, 2)}</b> กม./ล. · เทียบเป้า <span style="color:var(--text-muted);">${fmt(targetFuelRate, 2)}</span> กม./ล.</div>`;
+  } else {
+    fuelLine = `<div class="cell-label">อัตราสิ้นเปลือง ${fmt(fuelRate, 2)} กม./ล. · ไม่มีเป้า</div>`;
+  }
+  return `<div class="cell-flex">${repairLine}${fuelLine}</div>`;
+}
 function cashCreditCellHtml(cashPct, creditPct, targetCashPct, cashPctGap, c) {
-  const marker = targetCashPct != null ? `<div class="bar-marker" style="left:${Math.max(0, Math.min(100, targetCashPct))}%"></div>` : '';
-  const stack = `<div class="stack-mini">${marker}<div style="width:${cashPct}%;background:${c.s1}"></div><div style="width:${creditPct}%;background:${c.s3}"></div></div>`;
-  const ratioText = `<div class="cell-label">${fmt(cashPct, 0)}% : ${fmt(creditPct, 0)}%</div>`;
+  const ratioText = `<div class="text-primary-strong" style="text-align:center;">${fmt(cashPct, 0)}% : ${fmt(creditPct, 0)}%</div>`;
   let verdict = '';
   if (targetCashPct != null) {
     const good = cashPctGap >= 0;
-    verdict = `<div class="verdict ${good ? 'good' : 'bad'}"><span>${good ? '▲' : '▼'}</span>เงินสด${good ? 'เกินเป้า' : 'ต่ำกว่าเป้า'} ${fmt(Math.abs(cashPctGap), 1)}% (เป้า ${fmt(targetCashPct, 0)}%)</div>`;
+    verdict = `<div class="cell-label" style="text-align:center;"><span style="color:${good ? 'var(--good)' : 'var(--critical)'};font-weight:600;">${good ? '▲' : '▼'} เงินสด${good ? 'เกินเป้า' : 'ต่ำกว่าเป้า'} ${fmt(Math.abs(cashPctGap), 1)}%</span></div>`;
   } else {
-    verdict = `<div class="cell-label">ไม่มีเป้า</div>`;
+    verdict = `<div class="cell-label" style="text-align:center;color:var(--text-muted);">ไม่มีเป้า</div>`;
   }
-  return `<div class="cell-flex"><div class="stack-row">${stack}${ratioText}</div>${verdict}</div>`;
-}
-function salesCellHtml(liters, litersPrev, targetLiters, targetAchievePct, pctYoY, max, c) {
-  const w = max > 0 ? Math.max(2, Math.min(100, 100 * liters / max)) : 0;
-  const prevMarker = (litersPrev !== null && max > 0)
-    ? `<div class="bar-marker prevyear" style="left:${Math.max(0, Math.min(100, 100 * litersPrev / max))}%" title="ปีก่อน"></div>` : '';
-  const targetMarker = (targetLiters > 0 && max > 0)
-    ? `<div class="bar-marker" style="left:${Math.max(0, Math.min(100, 100 * targetLiters / max))}%" title="เป้า"></div>` : '';
-  const fillColor = targetAchievePct === null ? c.s1 : (targetAchievePct >= 100 ? c.good : (targetAchievePct >= 80 ? c.s4 : c.critical));
-  const yoyPill = pctYoY === null
-    ? `<span class="verdict muted">ไม่มีข้อมูลปีก่อน</span>`
-    : `<span class="verdict ${pctYoY >= 0 ? 'good' : 'bad'}">${pctYoY >= 0 ? '▲' : '▼'} ${fmt(Math.abs(pctYoY), 1)}% จากปีก่อน</span>`;
-  const targetPill = targetAchievePct === null
-    ? `<span class="verdict muted">ไม่มีเป้า</span>`
-    : `<span class="verdict ${targetAchievePct >= 100 ? 'good' : (targetAchievePct >= 80 ? 'warn' : 'bad')}">${targetAchievePct >= 100 ? '✓' : (targetAchievePct >= 80 ? '⚠' : '✗')} ${fmt(targetAchievePct, 1)}% ของเป้า</span>`;
-  return `<div class="cell-flex">
-    <div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${fillColor}"></div>${prevMarker}${targetMarker}</div>
-    <div class="cell-label">${fmt(liters)} ล.</div>
-    <div class="pill-row">${yoyPill}${targetPill}</div>
-  </div>`;
+  return `<div class="cell-flex">${ratioText}${verdict}</div>`;
 }
 
 function renderTable(rowData) {
@@ -1071,34 +1132,24 @@ function renderTable(rowData) {
     if (th.getAttribute('data-key') === key) arrow.textContent = dir === 1 ? '↑' : '↓'; else arrow.textContent = '↕';
   });
 
-  const maxLiters = Math.max(1, ...rowData.map(r => Math.max(r.liters, r.litersPrev || 0, r.targetLiters || 0)));
-  const maxGP = Math.max(1, ...rowData.map(r => Math.abs(r.gp)));
-  const maxRepair = Math.max(1, ...rowData.map(r => r.repair));
-  const maxFuelRate = Math.max(0.01, ...rowData.map(r => r.fuelRate));
-  const maxFuelDiffPctAbs = Math.max(1, ...rowData.map(r => Math.abs(r.fuelDiffPct)));
-  const maxFuelRateWithTarget = Math.max(maxFuelRate, ...rowData.map(r => r.targetFuelRate || 0));
-
   const tbody = document.querySelector('#unifiedTable tbody');
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px;">ไม่พบ Route ID/รถที่ตรงกับคำค้นหา</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px;">ไม่พบ Route ID/รถที่ตรงกับคำค้นหา</td></tr>`;
     return;
   }
   tbody.innerHTML = rows.map(r => `
     <tr class="${FLAGGED_ROUTES.has(r.routeId) ? 'flagged' : ''}">
       <td><div class="veh-cell"><span class="bu-badge">${escapeHtml(r.bu)}</span><div class="cell-flex"><strong>${escapeHtml(r.routeId)}${r.routeMissing ? ' <span style="color:var(--text-muted);font-weight:400;">(ไม่มี Route ID)</span>' : ''}</strong><span class="cell-label">${escapeHtml(r.vehicle)}</span></div></div></td>
-      <td>${salesCellHtml(r.liters, r.litersPrev, r.targetLiters, r.targetAchievePct, r.pct, maxLiters, c)}</td>
-      <td>${divergingCellHtml(r.fuelDiffPct, maxFuelDiffPctAbs, c, '%', 2, r.fuelDiffWithinTol)}</td>
-      <td>${barCellHtml(r.gp, maxGP, c.s6, '฿' + fmt(r.gp))}</td>
-      <td>${costProfitCellHtml(r.costPerLiter, r.gpPerLiter, c)}</td>
-      <td>${barCellHtml(r.repair, maxRepair, c.s4, '฿' + fmt(r.repair) + (FLAGGED_ROUTES.has(r.routeId) ? ' 🔴' : ''))}</td>
-      <td>${targetBulletCellHtml(r.fuelRate, r.targetFuelRate, maxFuelRateWithTarget, c.s1, ' กม./ล.', 2)}</td>
+      <td>${salesCellHtml(r.liters, r.litersPrev, r.targetLiters, r.targetAchievePct, r.pct, r.fuelDiffPct, c)}</td>
+      <td>${financialsCellHtml(r.gp, r.costPerLiter, r.gpPerLiter)}</td>
+      <td>${maintenanceCellHtml(r.repair, r.fuelRate, r.targetFuelRate)}</td>
       <td>${cashCreditCellHtml(r.cashPct, r.creditPct, r.targetCashPct, r.cashPctGap, c)}</td>
     </tr>
   `).join('');
 }
 
 // ---------------------------------------------------------------------
-// Zone 3b — Focus charts
+// Zone 2 — Focus charts
 // ---------------------------------------------------------------------
 function renderScatter(rowData, c) {
   destroyChart('scatter');
