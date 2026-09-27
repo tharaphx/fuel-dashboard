@@ -261,10 +261,34 @@
   .view-toggle button.active { background: var(--series-1); color: #fff; }
 
   .repair-tag { display:inline-flex; align-items:center; font-size: 11.5px; font-weight: 700; padding: 2px 9px; border-radius: 20px; margin: 2px 4px 0 0; }
-  .repair-tag.parts { color: var(--series-1); background: color-mix(in srgb, var(--series-1) 14%, transparent); }
-  .repair-tag.labor { color: var(--text-secondary); background: var(--page-plane); }
-  .repair-tag.tires { color: var(--good); background: color-mix(in srgb, var(--good) 14%, transparent); }
-  .repair-tag.other { color: var(--text-muted); background: var(--page-plane); }
+
+  .repair-ytd-section { margin-bottom: 22px; }
+  .repair-ytd-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .repair-ytd-head h3 { font-size: 15px; font-weight: 700; margin: 0; }
+  .repair-ytd-vehicle-picker { display: flex; align-items: center; gap: 8px; }
+  .repair-ytd-vehicle-picker label { font-size: 13px; color: var(--text-secondary); font-weight: 600; }
+  .repair-ytd-vehicle-picker select {
+    background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border);
+    border-radius: 9px; padding: 8px 12px; font-size: 13.5px; min-width: 220px;
+  }
+  .repair-donut-row { display: flex; align-items: center; gap: 18px; }
+  .repair-donut-wrap { position: relative; width: 150px; height: 150px; flex-shrink: 0; }
+  .repair-donut-center {
+    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; text-align: center; pointer-events: none; padding: 0 10px;
+  }
+  .repair-donut-center .lbl { font-size: 10.5px; color: var(--text-muted); font-weight: 600; }
+  .repair-donut-center .val { font-size: 16px; font-weight: 800; color: var(--text-primary); margin-top: 2px; }
+  .repair-cat-legend { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .repair-cat-legend .cat-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    font-size: 12px; padding: 3px 6px; border-radius: 6px; cursor: pointer; white-space: nowrap;
+  }
+  .repair-cat-legend .cat-row:hover { background: var(--page-plane); }
+  .repair-cat-legend .cat-row.active { background: var(--page-plane); font-weight: 700; }
+  .repair-cat-legend .cat-name { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--text-secondary); }
+  .repair-cat-legend .cat-dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+  .repair-cat-legend .cat-pct { color: var(--text-muted); flex-shrink: 0; }
 
   tr.repair-hot td:first-child { box-shadow: inset 4px 0 0 var(--critical); }
   tr.repair-hot { background: color-mix(in srgb, var(--warning) 8%, transparent); }
@@ -437,6 +461,56 @@
       </div>
     </div>
 
+    <div class="repair-ytd-section">
+      <div class="repair-ytd-head">
+        <h3>แนวโน้มค่าซ่อมสะสมประจำปี &amp; สัดส่วนตามประเภทงาน</h3>
+        <div class="repair-ytd-vehicle-picker">
+          <label for="repairYtdVehicleSelect">มุมมอง</label>
+          <select id="repairYtdVehicleSelect"><option value="FLEET">ภาพรวมรถทั้งหมด (Fleet Overview)</option></select>
+        </div>
+      </div>
+
+      <div class="repair-kpi-grid" style="margin-bottom:16px;">
+        <div class="repair-kpi-card">
+          <div class="label">ค่าซ่อมสะสม YTD</div>
+          <div class="value" id="ytdKpiTotal">-</div>
+        </div>
+        <div class="repair-kpi-card">
+          <div class="label">เดือนที่ซ่อมสูงสุด</div>
+          <div class="value" id="ytdKpiTopMonth">-</div>
+        </div>
+        <div class="repair-kpi-card">
+          <div class="label">เฉลี่ยต่อเดือน</div>
+          <div class="value" id="ytdKpiAvg">-</div>
+        </div>
+      </div>
+
+      <div class="focus-grid" style="grid-template-columns: 1.3fr 1fr;">
+        <div class="chart-card">
+          <h3 id="repairYtdChartTitle">แนวโน้มค่าซ่อมสะสม — ภาพรวมรถทั้งหมด</h3>
+          <div class="desc">เส้นสะสมตั้งแต่เดือน ม.ค. ของปีที่เลือกไว้ในตัวกรองด้านบน จนถึงเดือนล่าสุดที่มีข้อมูล</div>
+          <div class="chart-wrap"><canvas id="repairYtdChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+            <h3 style="margin:0;">สัดส่วนตามประเภทงานซ่อม</h3>
+            <span class="desc" id="repairDonutFilterNote" style="margin:0;"></span>
+          </div>
+          <div class="repair-donut-row">
+            <div class="repair-donut-wrap">
+              <canvas id="repairDonutChart"></canvas>
+              <div class="repair-donut-center">
+                <div class="lbl" id="repairDonutCenterLabel">ทั้งหมด</div>
+                <div class="val" id="repairDonutCenterValue">฿0</div>
+              </div>
+            </div>
+            <div class="repair-cat-legend" id="repairCatLegend"></div>
+          </div>
+          <div class="desc" style="margin-top:8px;">คลิกชิ้นโดนัทหรือรายการใน Legend เพื่อกรองตารางรายการซ่อมด้านล่างเฉพาะประเภทนั้น (เลือก "ทุกประเภทงาน" ในตัวกรองด้านล่างเพื่อยกเลิก)</div>
+        </div>
+      </div>
+    </div>
+
     <div class="repair-controls">
       <div class="left">
         <input id="repairSearchInput" placeholder="ค้นหา ทะเบียนรถ / รายการซ่อม / Route ID" style="min-width:240px;">
@@ -578,7 +652,7 @@ let RAW = [];
 let RAW_REPAIR = [];
 let TARGET_CASH_BY_BU = {};
 let FUEL_DIFF_TOLERANCE_PCT = 0.5;
-let STATE = { ym: null, bu: 'ALL', search: '', sortKey: 'liters', sortDir: 'desc', repairSortKey: 'cost', repairSortDir: 'desc', repairSearch: '', repairTag: 'ALL', repairShop: 'ALL', repairView: 'table' };
+let STATE = { ym: null, bu: 'ALL', search: '', sortKey: 'liters', sortDir: 'desc', repairSortKey: 'cost', repairSortDir: 'desc', repairSearch: '', repairTag: 'ALL', repairShop: 'ALL', repairView: 'table', repairYtdVehicle: 'FLEET' };
 let CHARTS = {};
 let LAST_ROWDATA = [];
 
@@ -670,6 +744,7 @@ async function loadRepairData() {
       item: (r[3] || '').trim(),
       cost: parseNum(r[4]),
       shop: (r[5] || '').trim(),
+      categoryRaw: (r[6] || '').trim(),
     }));
     statusEl.textContent = '';
   } catch (err) {
@@ -800,6 +875,7 @@ function initFilters() {
   const repairSearchInput = document.getElementById('repairSearchInput');
   repairSearchInput.addEventListener('input', () => { STATE.repairSearch = repairSearchInput.value.trim().toLowerCase(); renderRepairZone(); });
   document.getElementById('repairTagFilter').addEventListener('change', (e) => { STATE.repairTag = e.target.value; renderRepairZone(); });
+  document.getElementById('repairYtdVehicleSelect').addEventListener('change', (e) => { STATE.repairYtdVehicle = e.target.value; renderRepairZone(); });
   document.getElementById('repairShopFilter').addEventListener('change', (e) => { STATE.repairShop = e.target.value; renderRepairZone(); });
   document.getElementById('repairViewTable').addEventListener('click', () => { STATE.repairView = 'table'; renderRepairZone(); });
   document.getElementById('repairViewAccordion').addEventListener('click', () => { STATE.repairView = 'accordion'; renderRepairZone(); });
@@ -1232,18 +1308,34 @@ function renderTrend(ym, bu, c) {
 // ---------------------------------------------------------------------
 // Zone 4 — Monthly repair items (KPI cards, search/filter, table/accordion toggle)
 // ---------------------------------------------------------------------
-const TAG_KEYWORDS = [
-  { tag: 'ยาง', words: ['ยาง'] },
-  { tag: 'ค่าแรง', words: ['ค่าแรง', 'ตรวจเช็ค', 'เช็คระยะ'] },
-  { tag: 'อะไหล่', words: ['เปลี่ยน', 'อะไหล่', 'แบตเตอรี่', 'กรอง', 'ไฟ', 'เบรก', 'คลัตช์', 'เกียร์'] },
-];
-function classifyRepairTags(item) {
-  const found = new Set();
-  TAG_KEYWORDS.forEach(({ tag, words }) => { if (words.some(w => item.includes(w))) found.add(tag); });
-  if (!found.size) found.add('อื่นๆ');
-  return [...found];
+// Repair categories now come from the real "ประเภทงาน" column in the "ซ่อมบำรุง"
+// sheet (7 categories) instead of guessing from keywords in the item name.
+// Colors are theme-aware (adjust automatically in dark mode) via COLORS().
+function getRepairCategoryDefs(c) {
+  return [
+    { name: 'PM ตามระยะ', keyword: 'PM', color: c.s1 },
+    { name: 'ซ่อมเสีย (Breakdown)', keyword: 'ซ่อมเสีย', color: c.critical },
+    { name: 'เปลี่ยนอะไหล่', keyword: 'อะไหล่', color: c.s5 },
+    { name: 'ตรวจสภาพประจำปี', keyword: 'ตรวจสภาพ', color: c.s3 },
+    { name: 'ตรวจถังบรรทุก/สอบเทียบมิเตอร์', keyword: 'ถัง', color: c.s4 },
+    { name: 'งานยาง', keyword: 'ยาง', color: c.s2 },
+    { name: 'อื่นๆ', keyword: 'อื่น', color: c.s6 },
+  ];
 }
-const TAG_CLASS = { 'อะไหล่': 'parts', 'ค่าแรง': 'labor', 'ยาง': 'tires', 'อื่นๆ': 'other' };
+// Resolves a row's raw "ประเภทงาน" text to a known category definition. A blank
+// cell (rows entered before the column existed) falls back to "ไม่ระบุ" rather
+// than guessing; unrecognized text is still shown as its own category instead
+// of being silently dropped.
+function resolveRepairCategory(rawText, defs) {
+  const t = (rawText || '').trim();
+  if (!t) return { name: 'ไม่ระบุ', color: '#a8a6a0', unspecified: true };
+  const upper = t.toUpperCase();
+  const found = defs.find(d => t.includes(d.keyword) || upper.includes(d.keyword.toUpperCase()));
+  return found || { name: t, color: '#9b8fce', unknown: true };
+}
+function repairCatBadgeHtml(cat) {
+  return `<span class="repair-tag" style="color:${cat.color};background:color-mix(in srgb, ${cat.color} 14%, transparent);">${escapeHtml(cat.name)}</span>`;
+}
 
 // Cross-reference each repair row's vehicle to the Route ID it ran that same
 // BU + Year-Month in the main sheet, so Zone 4 can show "Route ID (ตอนซ่อม)"
@@ -1254,20 +1346,22 @@ function routeIdForRepair(r) {
 }
 
 function renderRepairZone() {
+  const c = COLORS();
+  const catDefs = getRepairCategoryDefs(c);
   const ym = STATE.ym, bu = STATE.bu;
   const monthRows = RAW_REPAIR.filter(r => r.ym === ym && (bu === 'ALL' || r.bu === bu))
-    .map(r => ({ ...r, routeId: routeIdForRepair(r), tags: classifyRepairTags(r.item) }));
+    .map(r => ({ ...r, routeId: routeIdForRepair(r), category: resolveRepairCategory(r.categoryRaw, catDefs) }));
 
   document.getElementById('repairTitle').textContent = `(${monthRows.length} รายการ)`;
 
-  // Populate tag/shop filter dropdowns once per render (cheap enough; option list rarely changes).
+  // Populate category/shop filter dropdowns once per render (cheap enough; option list rarely changes).
   const tagSelect = document.getElementById('repairTagFilter');
   const shopSelect = document.getElementById('repairShopFilter');
-  const allTags = [...new Set(monthRows.flatMap(r => r.tags))].sort();
+  const allCats = [...new Set(monthRows.map(r => r.category.name))].sort();
   const allShops = [...new Set(monthRows.map(r => r.shop))].sort();
-  if (tagSelect.dataset.count != allTags.length) {
-    tagSelect.innerHTML = '<option value="ALL">ทุกประเภทงาน</option>' + allTags.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
-    tagSelect.value = STATE.repairTag; tagSelect.dataset.count = allTags.length;
+  if (tagSelect.dataset.count != allCats.length) {
+    tagSelect.innerHTML = '<option value="ALL">ทุกประเภทงาน</option>' + allCats.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+    tagSelect.value = STATE.repairTag; tagSelect.dataset.count = allCats.length;
   }
   if (shopSelect.dataset.count != allShops.length) {
     shopSelect.innerHTML = '<option value="ALL">ทุกศูนย์ซ่อม</option>' + allShops.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
@@ -1276,7 +1370,7 @@ function renderRepairZone() {
 
   const q = STATE.repairSearch;
   const filtered = monthRows.filter(r => {
-    if (STATE.repairTag !== 'ALL' && !r.tags.includes(STATE.repairTag)) return false;
+    if (STATE.repairTag !== 'ALL' && r.category.name !== STATE.repairTag) return false;
     if (STATE.repairShop !== 'ALL' && r.shop !== STATE.repairShop) return false;
     if (q && !(r.vehicle.toLowerCase().includes(q) || r.item.toLowerCase().includes(q) || r.routeId.toLowerCase().includes(q) || r.bu.toLowerCase().includes(q))) return false;
     return true;
@@ -1308,6 +1402,8 @@ function renderRepairZone() {
   } else {
     renderRepairAccordion(filtered, topVehicle.plate);
   }
+
+  renderRepairYtdSection(c, catDefs);
 }
 
 function renderRepairTable(rows, hotPlate) {
@@ -1336,7 +1432,7 @@ function renderRepairTable(rows, hotPlate) {
       <td>${escapeHtml(r.routeId)}</td>
       <td>
         <div>${escapeHtml(r.item)}</div>
-        <div>${r.tags.map(t => `<span class="repair-tag ${TAG_CLASS[t] || 'other'}">${escapeHtml(t)}</span>`).join('')}</div>
+        <div>${repairCatBadgeHtml(r.category)}</div>
       </td>
       <td>${escapeHtml(r.shop)}</td>
       <td style="text-align:right;font-weight:700;">฿${fmt(r.cost, 2)}</td>
@@ -1377,7 +1473,7 @@ function renderRepairAccordion(rows, hotPlate) {
       ${isOpen ? `<div class="accordion-body">${g.items.map(r => `
         <div class="accordion-row">
           <div>
-            <div class="item-name">${escapeHtml(r.item)} ${r.tags.map(t => `<span class="repair-tag ${TAG_CLASS[t] || 'other'}">${escapeHtml(t)}</span>`).join('')}</div>
+            <div class="item-name">${escapeHtml(r.item)} ${repairCatBadgeHtml(r.category)}</div>
             <div class="item-shop">${escapeHtml(r.shop)}</div>
           </div>
           <div class="item-cost">฿${fmt(r.cost, 2)}</div>
@@ -1392,6 +1488,174 @@ function toggleRepairAccordion(plate) {
   REPAIR_ACCORDION_TOUCHED = true;
   if (REPAIR_ACCORDION_OPEN.has(plate)) REPAIR_ACCORDION_OPEN.delete(plate); else REPAIR_ACCORDION_OPEN.add(plate);
   renderRepairZone();
+}
+
+// ---------------------------------------------------------------------
+// Zone 4 — YTD cumulative maintenance chart + repair-category donut
+// Spans the whole calendar year of the currently selected "เดือน-ปี" filter
+// (independent of which single month that filter picks), respecting the BU
+// filter. A separate vehicle picker (Fleet vs one vehicle) controls both the
+// line chart and the donut; clicking a donut slice / legend row cross-filters
+// the repair table below by setting the existing "ประเภทงาน" dropdown.
+// ---------------------------------------------------------------------
+const YTD_MONTH_LABELS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+
+function renderRepairYtdSection(c, catDefs) {
+  const year = (STATE.ym || '').split('-')[0];
+  const bu = STATE.bu;
+  const yearRows = RAW_REPAIR.filter(r => r.ym.startsWith(year + '-') && (bu === 'ALL' || r.bu === bu));
+
+  // Populate the vehicle picker (Fleet + distinct vehicles for this year/BU) once per option-set change.
+  const vehSelect = document.getElementById('repairYtdVehicleSelect');
+  const vehicles = [...new Set(yearRows.map(r => r.vehicle))].sort();
+  if (vehSelect.dataset.count != vehicles.length) {
+    vehSelect.innerHTML = '<option value="FLEET">ภาพรวมรถทั้งหมด (Fleet Overview)</option>' +
+      vehicles.map(v => `<option value="${escapeHtml(v)}">รถคันเดียว: ${escapeHtml(v)}</option>`).join('');
+    if (!vehicles.includes(STATE.repairYtdVehicle) && STATE.repairYtdVehicle !== 'FLEET') STATE.repairYtdVehicle = 'FLEET';
+    vehSelect.value = STATE.repairYtdVehicle;
+    vehSelect.dataset.count = vehicles.length;
+  }
+
+  const view = STATE.repairYtdVehicle;
+  const viewRows = view === 'FLEET' ? yearRows : yearRows.filter(r => r.vehicle === view);
+
+  // Monthly + cumulative totals for the line chart.
+  const monthly = new Array(12).fill(0);
+  viewRows.forEach(r => {
+    const mIdx = parseInt((r.ym.split('-')[1] || '0'), 10) - 1;
+    if (mIdx >= 0 && mIdx < 12) monthly[mIdx] += r.cost;
+  });
+  let running = 0;
+  const cum = monthly.map(v => (running += v));
+
+  document.getElementById('repairYtdChartTitle').textContent = view === 'FLEET'
+    ? 'แนวโน้มค่าซ่อมสะสม — ภาพรวมรถทั้งหมด'
+    : `แนวโน้มค่าซ่อมสะสม — รถคัน ${view}`;
+
+  const ytdTotal = cum[cum.length - 1];
+  const maxMonthVal = Math.max(...monthly);
+  const maxMonthIdx = monthly.indexOf(maxMonthVal);
+  document.getElementById('ytdKpiTotal').textContent = viewRows.length ? '฿' + fmt(ytdTotal, 2) : '-';
+  document.getElementById('ytdKpiTopMonth').textContent = viewRows.length && maxMonthVal > 0
+    ? `${YTD_MONTH_LABELS[maxMonthIdx]} (฿${fmt(maxMonthVal, 2)})` : '-';
+  document.getElementById('ytdKpiAvg').textContent = viewRows.length ? '฿' + fmt(ytdTotal / 12, 2) : '-';
+
+  destroyChart('repairYtd');
+  const ctx = document.getElementById('repairYtdChart').getContext('2d');
+  const gradient = ctx.createLinearGradient(0, 0, 0, 260);
+  gradient.addColorStop(0, c.s1 + '48');
+  gradient.addColorStop(1, c.s1 + '05');
+  CHARTS.repairYtd = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: YTD_MONTH_LABELS,
+      datasets: [{
+        label: 'ค่าซ่อมสะสมจริง', data: cum, borderColor: c.s1, backgroundColor: gradient,
+        fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: c.s1, borderWidth: 2.5,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1,
+          callbacks: {
+            title: (items) => items[0].label,
+            label: (item) => ['ค่าซ่อมเดือนนี้: ฿' + fmt(monthly[item.dataIndex], 2), 'สะสม YTD: ฿' + fmt(item.raw, 2)]
+          }
+        }
+      },
+      scales: {
+        y: { ticks: { color: c.muted, font: { size: 11 }, callback: (v) => '฿' + (v / 1000) + 'k' }, grid: { color: c.grid } },
+        x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } }
+      }
+    }
+  });
+
+  renderRepairDonut(c, catDefs, view, viewRows);
+}
+
+function renderRepairDonut(c, catDefs, view, viewRows) {
+  const totals = {};
+  const colorByName = {};
+  catDefs.forEach(d => { totals[d.name] = 0; colorByName[d.name] = d.color; });
+  viewRows.forEach(r => {
+    const cat = resolveRepairCategory(r.categoryRaw, catDefs);
+    totals[cat.name] = (totals[cat.name] || 0) + r.cost;
+    colorByName[cat.name] = cat.color;
+  });
+  const names = Object.keys(totals).filter(n => totals[n] > 0);
+  const grandTotal = names.reduce((a, n) => a + totals[n], 0);
+
+  document.getElementById('repairDonutFilterNote').textContent = view === 'FLEET' ? 'ภาพรวมทั้งกองรถ' : `เฉพาะ ${view}`;
+  const focusName = (STATE.repairTag !== 'ALL' && totals[STATE.repairTag] !== undefined) ? STATE.repairTag : null;
+  document.getElementById('repairDonutCenterLabel').textContent = focusName || 'ทั้งหมด';
+  document.getElementById('repairDonutCenterValue').textContent = '฿' + fmt(focusName ? totals[focusName] : grandTotal, 0);
+
+  destroyChart('repairDonut');
+  const ctx = document.getElementById('repairDonutChart').getContext('2d');
+  CHARTS.repairDonut = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: names,
+      datasets: [{
+        data: names.map(n => totals[n]), backgroundColor: names.map(n => colorByName[n]),
+        borderColor: c.surface, borderWidth: 2, hoverOffset: 6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '68%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1,
+          callbacks: {
+            label: (item) => {
+              const pct = grandTotal ? (item.raw / grandTotal * 100).toFixed(1) : '0.0';
+              return ` ${item.label}: ฿${fmt(item.raw, 0)} (${pct}%)`;
+            }
+          }
+        }
+      },
+      onHover: (evt, elements) => {
+        if (elements.length) {
+          const name = names[elements[0].index];
+          document.getElementById('repairDonutCenterLabel').textContent = name;
+          document.getElementById('repairDonutCenterValue').textContent = '฿' + fmt(totals[name], 0);
+          evt.native.target.style.cursor = 'pointer';
+        } else if (evt.native.target) {
+          evt.native.target.style.cursor = 'default';
+        }
+      },
+      onClick: (evt, elements) => {
+        if (!elements.length) return;
+        const name = names[elements[0].index];
+        STATE.repairTag = (STATE.repairTag === name) ? 'ALL' : name;
+        document.getElementById('repairTagFilter').value = STATE.repairTag;
+        renderRepairZone();
+      }
+    }
+  });
+
+  const legendEl = document.getElementById('repairCatLegend');
+  legendEl.innerHTML = names.map(n => {
+    const pct = grandTotal ? (totals[n] / grandTotal * 100).toFixed(1) : '0.0';
+    const isActive = STATE.repairTag === n;
+    return `<div class="cat-row ${isActive ? 'active' : ''}" data-cat="${escapeHtml(n)}">
+      <span class="cat-name"><span class="cat-dot" style="background:${colorByName[n]}"></span>${escapeHtml(n)}</span>
+      <span class="cat-pct">${pct}%</span>
+    </div>`;
+  }).join('');
+  legendEl.querySelectorAll('.cat-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const name = row.getAttribute('data-cat');
+      STATE.repairTag = (STATE.repairTag === name) ? 'ALL' : name;
+      document.getElementById('repairTagFilter').value = STATE.repairTag;
+      renderRepairZone();
+    });
+  });
 }
 
 bootstrap();
