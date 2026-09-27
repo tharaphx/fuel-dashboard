@@ -480,15 +480,15 @@
           <div class="value" id="ytdKpiTopMonth">-</div>
         </div>
         <div class="repair-kpi-card">
-          <div class="label">เฉลี่ยต่อเดือน</div>
-          <div class="value" id="ytdKpiAvg">-</div>
+          <div class="label">รถที่ค่าซ่อมสูงสุดประจำปี</div>
+          <div class="value" id="ytdKpiTopVehicle">-</div>
         </div>
       </div>
 
       <div class="focus-grid" style="grid-template-columns: 1.3fr 1fr;">
         <div class="chart-card">
-          <h3 id="repairYtdChartTitle">แนวโน้มค่าซ่อมสะสม — ภาพรวมรถทั้งหมด</h3>
-          <div class="desc">เส้นสะสมตั้งแต่เดือน ม.ค. ของปีที่เลือกไว้ในตัวกรองด้านบน จนถึงเดือนล่าสุดที่มีข้อมูล</div>
+          <h3 id="repairYtdChartTitle">ค่าซ่อมประจำเดือนแยกตามคันรถ (Monthly Maintenance Cost by Vehicle)</h3>
+          <div class="desc">แสดงยอดค่าซ่อมในแต่ละเดือน (ม.ค. - ธ.ค.) แบ่งตามรายคันรถเพื่อเปรียบเทียบการใช้งานงบประมาณ</div>
           <div class="chart-wrap"><canvas id="repairYtdChart"></canvas></div>
         </div>
         <div class="chart-card">
@@ -1519,57 +1519,67 @@ function renderRepairYtdSection(c, catDefs) {
   const view = STATE.repairYtdVehicle;
   const viewRows = view === 'FLEET' ? yearRows : yearRows.filter(r => r.vehicle === view);
 
-  // Monthly + cumulative totals for the line chart.
-  const monthly = new Array(12).fill(0);
+  // Monthly totals per vehicle (for the stacked bar) and combined (for KPI cards).
+  const chartVehicles = view === 'FLEET' ? vehicles : [view];
+  const monthlyByVehicle = {};
+  chartVehicles.forEach(v => { monthlyByVehicle[v] = new Array(12).fill(0); });
   viewRows.forEach(r => {
     const mIdx = parseInt((r.ym.split('-')[1] || '0'), 10) - 1;
-    if (mIdx >= 0 && mIdx < 12) monthly[mIdx] += r.cost;
+    if (mIdx >= 0 && mIdx < 12 && monthlyByVehicle[r.vehicle]) monthlyByVehicle[r.vehicle][mIdx] += r.cost;
   });
-  let running = 0;
-  const cum = monthly.map(v => (running += v));
+  const monthly = new Array(12).fill(0);
+  chartVehicles.forEach(v => monthlyByVehicle[v].forEach((val, i) => monthly[i] += val));
 
-  document.getElementById('repairYtdChartTitle').textContent = view === 'FLEET'
-    ? 'แนวโน้มค่าซ่อมสะสม — ภาพรวมรถทั้งหมด'
-    : `แนวโน้มค่าซ่อมสะสม — รถคัน ${view}`;
+  document.getElementById('repairYtdChartTitle').textContent = 'ค่าซ่อมประจำเดือนแยกตามคันรถ (Monthly Maintenance Cost by Vehicle)';
 
-  const ytdTotal = cum[cum.length - 1];
+  const ytdTotal = monthly.reduce((a, b) => a + b, 0);
   const maxMonthVal = Math.max(...monthly);
   const maxMonthIdx = monthly.indexOf(maxMonthVal);
   document.getElementById('ytdKpiTotal').textContent = viewRows.length ? '฿' + fmt(ytdTotal, 2) : '-';
   document.getElementById('ytdKpiTopMonth').textContent = viewRows.length && maxMonthVal > 0
     ? `${YTD_MONTH_LABELS[maxMonthIdx]} (฿${fmt(maxMonthVal, 2)})` : '-';
-  document.getElementById('ytdKpiAvg').textContent = viewRows.length ? '฿' + fmt(ytdTotal / 12, 2) : '-';
+
+  // "Top vehicle of the year" always answers for the whole (BU-filtered) fleet,
+  // regardless of which single vehicle the dropdown above is currently showing.
+  const vehicleYearTotals = {};
+  yearRows.forEach(r => { vehicleYearTotals[r.vehicle] = (vehicleYearTotals[r.vehicle] || 0) + r.cost; });
+  let topVehicleOfYear = { vehicle: '-', total: 0 };
+  Object.entries(vehicleYearTotals).forEach(([v, t]) => { if (t > topVehicleOfYear.total) topVehicleOfYear = { vehicle: v, total: t }; });
+  document.getElementById('ytdKpiTopVehicle').textContent = topVehicleOfYear.total > 0
+    ? `${topVehicleOfYear.vehicle} (฿${fmt(topVehicleOfYear.total, 2)})` : '-';
+
+  const palette = [c.s1, c.s2, c.s3, c.s4, c.s5, c.s6, c.s7];
+  const vehicleColor = (v, i) => palette[i % palette.length];
+  const datasets = chartVehicles.map((v, i) => ({
+    label: v, data: monthlyByVehicle[v], backgroundColor: vehicleColor(v, i), borderRadius: 3, maxBarThickness: 34,
+  }));
 
   destroyChart('repairYtd');
   const ctx = document.getElementById('repairYtdChart').getContext('2d');
-  const gradient = ctx.createLinearGradient(0, 0, 0, 260);
-  gradient.addColorStop(0, c.s1 + '48');
-  gradient.addColorStop(1, c.s1 + '05');
   CHARTS.repairYtd = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: YTD_MONTH_LABELS,
-      datasets: [{
-        label: 'ค่าซ่อมสะสมจริง', data: cum, borderColor: c.s1, backgroundColor: gradient,
-        fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: c.s1, borderWidth: 2.5,
-      }]
-    },
+    type: 'bar',
+    data: { labels: YTD_MONTH_LABELS, datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { display: false },
+        legend: { position: 'bottom', labels: { color: c.textSecondary, boxWidth: 11, boxHeight: 11, padding: 12, font: { size: 11.5 } } },
         tooltip: {
           backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1,
+          itemSort: (a, b) => b.raw - a.raw,
           callbacks: {
             title: (items) => items[0].label,
-            label: (item) => ['ค่าซ่อมเดือนนี้: ฿' + fmt(monthly[item.dataIndex], 2), 'สะสม YTD: ฿' + fmt(item.raw, 2)]
+            beforeBody: (items) => {
+              const total = items.reduce((a, it) => a + it.raw, 0);
+              return ['ยอดรวมค่าซ่อมประจำเดือน: ฿' + fmt(total, 2), ''];
+            },
+            label: (item) => item.raw > 0 ? ` ${item.dataset.label}: ฿${fmt(item.raw, 2)}` : null,
           }
         }
       },
       scales: {
-        y: { ticks: { color: c.muted, font: { size: 11 }, callback: (v) => '฿' + (v / 1000) + 'k' }, grid: { color: c.grid } },
-        x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } }
+        x: { stacked: true, grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } },
+        y: { stacked: true, ticks: { color: c.muted, font: { size: 11 }, callback: (v) => '฿' + (v / 1000) + 'k' }, grid: { color: c.grid } }
       }
     }
   });
