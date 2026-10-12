@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fuel Ops Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
     --page-plane:      #f2f1ec;
@@ -86,8 +88,8 @@
   * { box-sizing: border-box; }
   body {
     margin: 0; background: var(--page-plane); color: var(--text-primary);
-    font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
-    font-size: 16px; /* enlarged base per the "easier to read" redesign */
+    font-family: 'Prompt', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+    font-size: 18px; /* enlarged base per the "easier to read" redesign */
   }
   #loadingOverlay {
     position: fixed; inset: 0; background: var(--page-plane); z-index: 50;
@@ -100,12 +102,12 @@
     display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
     padding: 18px 28px; background: var(--surface-1); border-bottom: 1px solid var(--border);
   }
-  header h1 { font-size: 21px; margin: 0; font-weight: 700; }
-  header .sub { font-size: 13.5px; color: var(--text-secondary); margin-top: 3px; }
+  header h1 { font-size: 23.5px; margin: 0; font-weight: 700; }
+  header .sub { font-size: 15px; color: var(--text-secondary); margin-top: 3px; }
   .header-actions { display: flex; gap: 10px; align-items: center; }
   .icon-btn {
     background: var(--surface-2); border: 1px solid var(--border); color: var(--text-primary);
-    border-radius: 9px; padding: 9px 15px; font-size: 14px; cursor: pointer; font-weight: 600;
+    border-radius: 9px; padding: 9px 15px; font-size: 15.5px; cursor: pointer; font-weight: 600;
   }
   .icon-btn:hover { background: var(--border); }
 
@@ -115,11 +117,11 @@
   }
   .zone-tab {
     display: flex; align-items: center; gap: 8px; padding: 14px 14px; color: var(--text-secondary);
-    font-size: 13.5px; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap;
+    font-size: 15px; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap;
   }
   .zone-tab .dot {
     width: 18px; height: 18px; border-radius: 5px; background: var(--page-plane); display: flex;
-    align-items: center; justify-content: center; font-size: 10.5px; font-weight: 800; color: var(--text-muted); flex-shrink: 0;
+    align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: var(--text-muted); flex-shrink: 0;
   }
   .zone-tab:hover { color: var(--text-primary); }
   .zone-tab.active { color: var(--text-primary); border-bottom-color: var(--series-1); }
@@ -129,25 +131,29 @@
     display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
     padding: 16px 28px; background: var(--surface-1); border-bottom: 1px solid var(--border);
   }
-  .filter-bar label { font-size: 13.5px; color: var(--text-secondary); margin-right: 7px; font-weight: 600; }
+  .filter-bar label { font-size: 15px; color: var(--text-secondary); margin-right: 7px; font-weight: 600; }
   .filter-bar select, .filter-bar input {
     background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border);
-    border-radius: 9px; padding: 9px 13px; font-size: 15px;
+    border-radius: 9px; padding: 9px 13px; font-size: 17px;
   }
-  #statusMsg { font-size: 13.5px; color: var(--text-muted); }
+  #statusMsg { font-size: 15px; color: var(--text-muted); }
   #statusMsg.err { color: var(--critical); }
 
-  main { max-width: 1320px; margin: 0 auto; padding: 26px 28px 70px; }
+  main { max-width: 1600px; margin: 0 auto; padding: 26px 28px 70px; }
   .block { margin-bottom: 40px; }
   .zone-panel { display: none; }
   .zone-panel.active { display: block; }
   h2.block-title {
-    font-size: 19px; font-weight: 700; margin: 0 0 16px; color: var(--text-primary);
+    font-size: 21.5px; font-weight: 700; margin: 0 0 16px; color: var(--text-primary);
     display: flex; align-items: center; gap: 10px;
   }
-  h2.block-title .n { color: var(--text-muted); font-weight: 500; font-size: 13.5px; }
+  h2.block-title .n { color: var(--text-muted); font-weight: 500; font-size: 15px; }
+  .block-subtitle {
+    font-size: 19px; font-weight: 700; margin: 30px 0 16px; color: var(--text-primary);
+    display: flex; align-items: center; gap: 10px; padding-top: 22px; border-top: 1px solid var(--border);
+  }
   .zone-tag {
-    font-size: 11px; font-weight: 700; letter-spacing: 0.04em; color: #fff;
+    font-size: 12.5px; font-weight: 700; letter-spacing: 0.04em; color: #fff;
     background: var(--series-1); padding: 3px 9px; border-radius: 6px;
   }
 
@@ -157,51 +163,103 @@
     background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px;
     padding: 20px 22px;
   }
-  .kpi-label { font-size: 14.5px; color: var(--text-secondary); margin-bottom: 10px; font-weight: 600; }
-  .kpi-value { font-size: 34px; font-weight: 800; line-height: 1.1; letter-spacing: -0.01em; }
-  .kpi-value .unit { font-size: 17px; font-weight: 600; color: var(--text-secondary); margin-left: 4px; }
-  .kpi-sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
-  .delta { display: inline-flex; align-items: center; gap: 5px; font-size: 14px; font-weight: 700; margin-top: 10px; padding: 3px 10px; border-radius: 20px; }
+  .kpi-label { font-size: 16px; color: var(--text-secondary); margin-bottom: 10px; font-weight: 600; }
+  .kpi-value { font-size: 38px; font-weight: 800; line-height: 1.1; letter-spacing: -0.01em; }
+  .kpi-value .unit { font-size: 19px; font-weight: 600; color: var(--text-secondary); margin-left: 4px; }
+  .kpi-sub { font-size: 14.5px; color: var(--text-muted); margin-top: 4px; }
+  .delta { display: inline-flex; align-items: center; gap: 5px; font-size: 15.5px; font-weight: 700; margin-top: 10px; padding: 3px 10px; border-radius: 20px; }
   .delta.up { color: var(--delta-good); background: color-mix(in srgb, var(--good) 14%, transparent); }
   .delta.down { color: var(--critical); background: color-mix(in srgb, var(--critical) 14%, transparent); }
   .delta.flat { color: var(--text-muted); background: color-mix(in srgb, var(--text-muted) 12%, transparent); }
   .kpi-spark { height: 38px; margin-top: 12px; }
   .kpi-donut-wrap { display: flex; align-items: center; gap: 14px; margin-top: 8px; }
   .kpi-donut-wrap canvas { max-width: 74px; max-height: 74px; }
+  .target-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 15.5px; font-weight: 700; margin-top: 8px; padding: 3px 10px; border-radius: 20px; }
 
-  /* ---------- Zone 5 (exceptions) ---------- */
-  .exception-list { display: flex; flex-direction: column; gap: 11px; }
-  .exception-row {
-    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
-    background: var(--surface-1); border: 1px solid var(--border); border-left: 6px solid var(--critical);
-    border-radius: 12px; padding: 16px 20px; font-size: 15.5px;
+  .alert-bar {
+    display: flex; align-items: flex-start; gap: 12px;
+    background: color-mix(in srgb, var(--warning) 10%, var(--surface-1));
+    border: 1px solid color-mix(in srgb, var(--warning) 45%, var(--border));
+    border-radius: 12px; padding: 12px 18px; margin-bottom: 16px; font-size: 15.5px; color: var(--text-primary);
   }
-  .exception-row.warning { border-left-color: var(--warning); }
-  .exception-row.serious { border-left-color: var(--serious); }
-  .sev-icon { font-size: 21px; }
-  .sev-label { font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: 0.03em; padding: 2px 9px; border-radius: 20px; color: var(--critical); background: color-mix(in srgb, var(--critical) 15%, transparent); }
-  .exception-row.serious .sev-label { color: var(--serious); background: color-mix(in srgb, var(--serious) 18%, transparent); }
-  .exception-row.warning .sev-label { color: #8a6200; background: color-mix(in srgb, var(--warning) 25%, transparent); }
-  .rule-name { font-weight: 700; color: var(--text-primary); }
-  .veh-name { font-weight: 700; font-size: 16.5px; }
-  .value-text { color: var(--text-secondary); }
-  .threshold-text { color: var(--text-muted); font-size: 13.5px; }
+  .alert-bar.ok { background: color-mix(in srgb, var(--good) 8%, var(--surface-1)); border-color: color-mix(in srgb, var(--good) 35%, var(--border)); }
+  .alert-bar .icon { font-size: 19px; line-height: 1.4; }
+  .alert-bar .lines { display: flex; flex-direction: column; gap: 4px; }
+  .alert-bar .lines .tag { font-weight: 800; color: #8a6200; margin-right: 6px; }
+  .alert-bar.ok .lines .tag { color: var(--good); }
+
+  /* ---------- Zone 5 — Executive Alert Feed ---------- */
+  .sev-summary { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .sev-pill {
+    display: flex; align-items: center; gap: 9px; background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 18px; cursor: pointer; flex: 1; min-width: 150px; transition: box-shadow .15s;
+  }
+  .sev-pill:hover { box-shadow: 0 1px 6px rgba(0,0,0,.06); }
+  .sev-pill.active { border-color: var(--text-primary); box-shadow: 0 1px 6px rgba(0,0,0,.08); }
+  .sev-pill .emoji { font-size: 23.5px; }
+  .sev-pill .count { font-size: 26px; font-weight: 800; line-height: 1; }
+  .sev-pill .lbl { font-size: 14px; color: var(--text-secondary); font-weight: 600; }
+
+  .exc-filter-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .exc-filter-row select {
+    background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border);
+    border-radius: 9px; padding: 9px 13px; font-size: 15.5px;
+  }
+  .exc-filter-row .clear-btn { font-size: 14.5px; color: var(--series-1); cursor: pointer; font-weight: 600; }
+
+  .alert-table { display: flex; flex-direction: column; gap: 10px; }
+  .alert-row {
+    display: grid; grid-template-columns: 108px 1.5fr 1.1fr 1fr 1.2fr auto;
+    align-items: center; gap: 14px;
+    background: var(--surface-1); border: 1px solid var(--border); border-left: 5px solid var(--critical);
+    border-radius: 12px; padding: 14px 18px;
+  }
+  .alert-row.serious { border-left-color: var(--serious); }
+  .alert-row.warning { border-left-color: var(--warning); }
+  .sev-badge {
+    display: inline-flex; align-items: center; gap: 5px; font-weight: 800; font-size: 14px;
+    padding: 4px 10px; border-radius: 20px; white-space: nowrap;
+    color: var(--critical); background: color-mix(in srgb, var(--critical) 15%, transparent);
+  }
+  .alert-row.serious .sev-badge { color: var(--serious); background: color-mix(in srgb, var(--serious) 18%, transparent); }
+  .alert-row.warning .sev-badge { color: #8a6200; background: color-mix(in srgb, var(--warning) 25%, transparent); }
+  .issue-title { font-weight: 700; font-size: 17px; color: var(--text-primary); }
+  .target-subject { font-size: 15px; color: var(--text-secondary); }
+  .target-subject b { color: var(--text-primary); font-weight: 700; }
+  .actual-value { font-size: 21.5px; font-weight: 800; }
+  .actual-value.critical { color: var(--critical); }
+  .actual-value.serious { color: var(--serious); }
+  .actual-value.warning { color: #8a6200; }
+  .benchmark-text { font-size: 14px; color: var(--text-muted); line-height: 1.4; }
+  .drill-btn {
+    font-size: 14.5px; font-weight: 700; color: var(--series-1); background: color-mix(in srgb, var(--series-1) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--series-1) 30%, transparent); border-radius: 8px; padding: 7px 12px; cursor: pointer; white-space: nowrap;
+  }
+  .drill-btn:hover { background: color-mix(in srgb, var(--series-1) 18%, transparent); }
+  .alert-col-header { display: grid; grid-template-columns: 108px 1.5fr 1.1fr 1fr 1.2fr auto; gap: 14px; padding: 0 18px; margin-bottom: 4px; }
+  .alert-col-header span { font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; }
+  .alert-empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 15.5px; }
+  @media (max-width: 900px) {
+    .alert-col-header { display: none; }
+    .alert-row { grid-template-columns: 1fr; gap: 8px; }
+  }
 
   /* ---------- Zone 3: unified table ---------- */
   .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; padding: 10px; }
   .full-table-wrap { overflow-x: auto; }
   .data-table { border-collapse: collapse; width: 100%; min-width: 1150px; }
   .data-table th {
-    text-align: left; font-size: 13px; color: var(--text-muted); font-weight: 700;
+    text-align: left; font-size: 14.5px; color: var(--text-muted); font-weight: 700;
     padding: 13px 18px; border-bottom: 1px solid var(--border); white-space: nowrap; cursor: pointer; user-select: none;
   }
   .data-table th.sorted { color: var(--text-primary); }
-  .data-table th .sort-arrow { font-size: 11px; margin-left: 3px; opacity: .6; }
-  .data-table td { padding: 16px 18px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .data-table th .sort-arrow { font-size: 12.5px; margin-left: 3px; opacity: .6; }
+  .data-table td { padding: 22px 18px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .hint-underline { text-decoration: underline dotted var(--text-muted); text-decoration-thickness: 1px; cursor: help; }
   .data-table tbody tr:hover { background: var(--page-plane); }
   .data-table tr.flagged td:first-child { box-shadow: inset 4px 0 0 var(--critical); }
   .veh-cell { display:flex; align-items:center; gap:8px; white-space: nowrap; }
-  .bu-badge { background: color-mix(in srgb, var(--series-1) 12%, transparent); color: var(--series-1); font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 6px; }
+  .bu-badge { background: color-mix(in srgb, var(--series-1) 12%, transparent); color: var(--series-1); font-size: 13.5px; font-weight: 600; padding: 3px 9px; border-radius: 6px; }
 
   .bar-track { position: relative; width: 130px; height: 16px; background: var(--page-plane); border-radius: 5px; overflow: visible; }
   .bar-fill { position: absolute; left:0; top:0; height: 100%; border-radius: 5px; }
@@ -211,13 +269,13 @@
   .bar-diverging .mid-line { position:absolute; left:50%; top:-3px; width:1px; height:22px; background: var(--baseline); }
   .bar-diverging .seg { position:absolute; top:0; height:100%; }
   .stack-mini { position: relative; display:flex; width: 110px; height: 16px; border-radius: 5px; overflow: visible; }
-  .cell-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; white-space: nowrap; font-weight: 500; }
-  .text-primary-strong { font-size: 18px; font-weight: 800; color: var(--text-primary); }
+  .cell-label { font-size: 13.5px; color: var(--text-muted); margin-top: 4px; white-space: nowrap; font-weight: 500; }
+  .text-primary-strong { font-size: 20px; font-weight: 800; color: var(--text-primary); }
   .cell-flex { display:flex; flex-direction: column; gap: 4px; }
-  .foot-note { font-size: 13px; color: var(--text-muted); margin-top: 12px; padding: 0 8px; line-height: 1.6; }
+  .foot-note { font-size: 14.5px; color: var(--text-muted); margin-top: 12px; padding: 0 8px; line-height: 1.6; }
 
   .stack-row { display:flex; align-items:center; gap:10px; }
-  .verdict { display:inline-flex; align-items:center; gap:4px; font-size: 12.5px; font-weight:700; padding: 2px 9px 2px 6px; border-radius: 20px; width: fit-content; white-space: nowrap; }
+  .verdict { display:inline-flex; align-items:center; gap:4px; font-size: 14px; font-weight:700; padding: 2px 9px 2px 6px; border-radius: 20px; width: fit-content; white-space: nowrap; }
   .verdict.good { color: var(--good); background: color-mix(in srgb, var(--good) 14%, transparent); }
   .verdict.bad { color: var(--critical); background: color-mix(in srgb, var(--critical) 14%, transparent); }
   .verdict.warn { color: #8a6200; background: color-mix(in srgb, var(--warning) 25%, transparent); }
@@ -226,49 +284,79 @@
   .pill-row { display:flex; gap:7px; margin-top:3px; flex-wrap:wrap; }
 
   .comp-bar { position: relative; display:flex; width: 150px; height: 16px; border-radius: 5px; overflow: hidden; background: var(--page-plane); }
-  .comp-legend { display:flex; gap:11px; font-size: 12.5px; color: var(--text-secondary); margin-top: 3px; white-space: nowrap; }
+  .comp-legend { display:flex; gap:11px; font-size: 14px; color: var(--text-secondary); margin-top: 3px; white-space: nowrap; }
   .comp-legend .dot { width:7px; height:7px; border-radius:2px; display:inline-block; margin-right:3px; }
-  .comp-total { font-size: 13.5px; color: var(--text-primary); font-weight:700; margin-top:1px; }
+  .comp-total { font-size: 15px; color: var(--text-primary); font-weight:700; margin-top:1px; }
 
   /* ---------- Zone 2: focus charts ---------- */
   .focus-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 18px; }
   .chart-card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
-  .chart-card h3 { font-size: 15px; margin: 0 0 4px; font-weight: 700; }
-  .chart-card .desc { font-size: 12.5px; color: var(--text-muted); margin-bottom: 12px; }
+  .chart-card h3 { font-size: 17px; margin: 0 0 4px; font-weight: 700; }
+  .chart-card .desc { font-size: 14px; color: var(--text-muted); margin-bottom: 12px; }
   .chart-wrap { height: 240px; }
+
+  /* Zone 2 "Modern Vibrant" redesign — deliberately more colorful than the
+     rest of the dashboard (Zone 1/3/4/5 stay low-noise/muted). Scoped to
+     .zone2-vibrant so it never touches .chart-card/.focus-grid used elsewhere
+     (e.g. Zone 4's repair YTD charts). */
+  .zone2-vibrant .focus-grid { grid-template-columns: repeat(2, 1fr); }
+  .zone2-vibrant .chart-card {
+    position: relative; border-radius: 20px; padding: 22px 22px 18px;
+    box-shadow: 0 1px 3px rgba(16,24,60,.06); transition: box-shadow .2s, transform .2s;
+  }
+  .zone2-vibrant .chart-card:hover { box-shadow: 0 10px 30px rgba(16,24,60,.10); transform: translateY(-2px); }
+  .zone2-vibrant .chart-card h3 { padding-right: 100px; }
+  .zone2-vibrant .chart-card .desc { padding-right: 100px; }
+  .zone2-vibrant .chart-wrap { height: 260px; }
+  .zone2-vibrant .full-span { grid-column: 1 / -1; }
+  .zone2-vibrant .badge-highlight {
+    position: absolute; top: 20px; right: 20px; text-align: right; padding: 5px 12px; border-radius: 20px;
+    font-size: 13px; font-weight: 700; white-space: nowrap;
+  }
+  @media (max-width: 900px) { .zone2-vibrant .focus-grid { grid-template-columns: 1fr; } .zone2-vibrant .full-span { grid-column: auto; } }
+
+  #z2Tooltip {
+    position: fixed; pointer-events: none; opacity: 0; transition: opacity .1s ease;
+    background: color-mix(in srgb, var(--surface-1) 72%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; box-shadow: 0 8px 24px rgba(16,24,60,.18);
+    font-size: 14px; color: var(--text-primary); min-width: 140px; z-index: 20;
+  }
+  #z2Tooltip .tt-title { font-weight: 700; font-size: 13.5px; color: var(--text-secondary); margin-bottom: 4px; }
+  #z2Tooltip .tt-row { display:flex; align-items:center; gap:6px; font-weight: 700; }
+  #z2Tooltip .tt-dot { width:8px; height:8px; border-radius:50%; }
 
   /* ---------- Zone 4 ---------- */
   .repair-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 20px; }
   .repair-kpi-card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
-  .repair-kpi-card .label { font-size: 13px; color: var(--text-secondary); font-weight: 600; margin-bottom: 6px; }
-  .repair-kpi-card .value { font-size: 22px; font-weight: 800; }
+  .repair-kpi-card .label { font-size: 14.5px; color: var(--text-secondary); font-weight: 600; margin-bottom: 6px; }
+  .repair-kpi-card .value { font-size: 24.5px; font-weight: 800; }
   .repair-kpi-card .value.accent-blue { color: var(--series-1); }
   .repair-kpi-card .value.accent-red { color: var(--critical); }
   .repair-kpi-card .value.accent-green { color: var(--good); }
-  .repair-kpi-card .sub { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+  .repair-kpi-card .sub { font-size: 13.5px; color: var(--text-muted); margin-top: 3px; }
 
   .repair-controls { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
   .repair-controls .left { display: flex; gap: 10px; flex-wrap: wrap; flex: 1; }
   .repair-controls input, .repair-controls select {
     background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border);
-    border-radius: 9px; padding: 9px 13px; font-size: 14.5px;
+    border-radius: 9px; padding: 9px 13px; font-size: 16px;
   }
   .view-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 9px; padding: 3px; background: var(--surface-1); }
   .view-toggle button {
-    border: none; background: transparent; color: var(--text-secondary); font-size: 13.5px; font-weight: 700;
+    border: none; background: transparent; color: var(--text-secondary); font-size: 15px; font-weight: 700;
     padding: 7px 14px; border-radius: 7px; cursor: pointer;
   }
   .view-toggle button.active { background: var(--series-1); color: #fff; }
 
-  .repair-tag { display:inline-flex; align-items:center; font-size: 11.5px; font-weight: 700; padding: 2px 9px; border-radius: 20px; margin: 2px 4px 0 0; }
+  .repair-tag { display:inline-flex; align-items:center; font-size: 13px; font-weight: 700; padding: 2px 9px; border-radius: 20px; margin: 2px 4px 0 0; }
 
   .repair-ytd-section { margin-bottom: 22px; }
   .repair-ytd-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
-  .repair-ytd-head h3 { font-size: 15px; font-weight: 700; margin: 0; }
+  .repair-ytd-head h3 { font-size: 17px; font-weight: 700; margin: 0; }
   .ytd-chart-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
   .ytd-chart-toolbar select {
     background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border);
-    border-radius: 9px; padding: 7px 12px; font-size: 13px; min-width: 200px;
+    border-radius: 9px; padding: 7px 12px; font-size: 14.5px; min-width: 200px;
   }
   .ytd-chart-toolbar select.hidden { display: none; }
   .repair-donut-row { display: flex; align-items: center; gap: 18px; }
@@ -277,12 +365,12 @@
     position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
     justify-content: center; text-align: center; pointer-events: none; padding: 0 10px;
   }
-  .repair-donut-center .lbl { font-size: 10.5px; color: var(--text-muted); font-weight: 600; }
-  .repair-donut-center .val { font-size: 16px; font-weight: 800; color: var(--text-primary); margin-top: 2px; }
+  .repair-donut-center .lbl { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+  .repair-donut-center .val { font-size: 18px; font-weight: 800; color: var(--text-primary); margin-top: 2px; }
   .repair-cat-legend { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
   .repair-cat-legend .cat-row {
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
-    font-size: 12px; padding: 3px 6px; border-radius: 6px; cursor: pointer; white-space: nowrap;
+    font-size: 13.5px; padding: 3px 6px; border-radius: 6px; cursor: pointer; white-space: nowrap;
   }
   .repair-cat-legend .cat-row:hover { background: var(--page-plane); }
   .repair-cat-legend .cat-row.active { background: var(--page-plane); font-weight: 700; }
@@ -292,23 +380,23 @@
 
   tr.repair-hot td:first-child { box-shadow: inset 4px 0 0 var(--critical); }
   tr.repair-hot { background: color-mix(in srgb, var(--warning) 8%, transparent); }
-  .hot-badge { display:inline-flex; align-items:center; margin-left: 8px; font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 20px; background: var(--critical); color: #fff; }
+  .hot-badge { display:inline-flex; align-items:center; margin-left: 8px; font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 20px; background: var(--critical); color: #fff; }
 
   .accordion-item { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px; overflow: hidden; }
   .accordion-item.hot { border-color: var(--warning); }
   .accordion-head { display:flex; align-items:center; justify-content: space-between; gap: 12px; padding: 15px 20px; cursor: pointer; flex-wrap: wrap; }
   .accordion-item.hot .accordion-head { background: color-mix(in srgb, var(--warning) 10%, transparent); }
   .accordion-head .left { display:flex; align-items:center; gap: 10px; flex-wrap: wrap; }
-  .accordion-head .plate { font-size: 16.5px; font-weight: 800; }
-  .accordion-head .meta { font-size: 12.5px; color: var(--text-muted); }
-  .accordion-head .total { font-size: 17px; font-weight: 800; }
+  .accordion-head .plate { font-size: 18.5px; font-weight: 800; }
+  .accordion-head .meta { font-size: 14px; color: var(--text-muted); }
+  .accordion-head .total { font-size: 19px; font-weight: 800; }
   .accordion-arrow { transition: transform .15s; color: var(--text-muted); }
   .accordion-item.open .accordion-arrow { transform: rotate(180deg); }
   .accordion-body { border-top: 1px solid var(--border); }
   .accordion-row { display:flex; justify-content: space-between; gap: 14px; padding: 12px 20px; border-bottom: 1px solid var(--border); }
   .accordion-row:last-child { border-bottom: none; }
-  .accordion-row .item-name { font-size: 14.5px; color: var(--text-primary); }
-  .accordion-row .item-shop { font-size: 12.5px; color: var(--text-muted); margin-top: 3px; }
+  .accordion-row .item-name { font-size: 16px; color: var(--text-primary); }
+  .accordion-row .item-shop { font-size: 14px; color: var(--text-muted); margin-top: 3px; }
   .accordion-row .item-cost { font-weight: 700; white-space: nowrap; }
 </style>
 </head>
@@ -316,7 +404,7 @@
 
 <div id="loadingOverlay">
   <div class="spinner"></div>
-  <div id="statusMsg" style="font-size:14px;">กำลังเชื่อมต่อ Google Sheet…</div>
+  <div id="statusMsg" style="font-size:15.5px;">กำลังเชื่อมต่อ Google Sheet…</div>
 </div>
 
 <header>
@@ -332,7 +420,6 @@
 
 <div class="zone-tabs" id="zoneTabs">
   <div class="zone-tab active" data-zone="zonePanel1"><span class="dot">1</span> ภาพรวมประจำเดือน</div>
-  <div class="zone-tab" data-zone="zonePanel2"><span class="dot">2</span> กราฟเจาะลึก</div>
   <div class="zone-tab" data-zone="zonePanel3"><span class="dot">3</span> ตารางรายเส้นทาง</div>
   <div class="zone-tab" data-zone="zonePanel4"><span class="dot">4</span> รายการซ่อม</div>
   <div class="zone-tab" data-zone="zonePanel5"><span class="dot">5</span> จุดที่ควรเฝ้าระวัง</div>
@@ -342,7 +429,7 @@
   <div><label for="ymSelect">เดือน-ปี</label><select id="ymSelect"></select></div>
   <div><label for="buSelect">หน่วยธุรกิจ (BU)</label><select id="buSelect"></select></div>
   <div><label for="searchInput">ค้นหา Route ID / รถ</label><input id="searchInput" placeholder="เช่น CH69, M60"></div>
-  <div id="statusMsgBar" style="font-size:13.5px;color:var(--text-muted);"></div>
+  <div id="statusMsgBar" style="font-size:15px;color:var(--text-muted);"></div>
 </div>
 
 <div id="app" style="display:none;">
@@ -350,11 +437,13 @@
 
   <section class="block zone-panel active" id="zonePanel1">
     <h2 class="block-title"><span class="zone-tag">ZONE 1</span> ภาพรวมประจำเดือน <span class="n" id="ovTitle"></span></h2>
+    <div class="alert-bar" id="zone1AlertBar"></div>
     <div class="kpi-grid">
       <div class="kpi-card">
         <div class="kpi-label">ยอดขายรวม</div>
         <div class="kpi-value"><span id="kpiLiters">-</span><span class="unit">ลิตร</span></div>
         <div id="kpiLitersDelta"></div>
+        <div id="kpiLitersTargetPill"></div>
         <div class="kpi-spark"><canvas id="sparkLiters"></canvas></div>
       </div>
       <div class="kpi-card">
@@ -373,47 +462,59 @@
         <div class="kpi-label">อัตราการใช้น้ำมันเฉลี่ย</div>
         <div class="kpi-value"><span id="kpiFuelRate">-</span><span class="unit">กม./ล.</span></div>
         <div id="kpiFuelRateDelta"></div>
+        <div class="kpi-spark"><canvas id="sparkFuelRate"></canvas></div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">เงินสด : เงินเชื่อ</div>
         <div class="kpi-donut-wrap">
           <canvas id="cashCreditDonut"></canvas>
           <div>
-            <div class="kpi-value" style="font-size:22px;" id="cashCreditLabel">-</div>
+            <div class="kpi-value" style="font-size:24.5px;" id="cashCreditLabel">-</div>
             <div id="cashCreditDelta"></div>
           </div>
         </div>
       </div>
+      <div class="kpi-card">
+        <div class="kpi-label">ค่าซ่อมบำรุงรวม</div>
+        <div class="kpi-value">฿ <span id="kpiRepairTotal">-</span></div>
+        <div id="kpiRepairDelta"></div>
+        <div class="kpi-spark"><canvas id="sparkRepair"></canvas></div>
+      </div>
     </div>
-  </section>
 
-  <section class="block zone-panel" id="zonePanel2">
-    <h2 class="block-title"><span class="zone-tag">ZONE 2</span> กราฟเจาะลึกที่ตารางแทนไม่ได้</h2>
-    <div class="focus-grid">
-      <div class="chart-card">
-        <h3>ความสัมพันธ์ ค่าซ่อม vs อัตราการใช้น้ำมัน</h3>
-        <div class="desc">แต่ละจุด = 1 เส้นทาง (Route ID) · ขนาดจุด = ยอดขายลิตร · สี = BU</div>
-        <div class="chart-wrap"><canvas id="scatterChart"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <h3>จำนวนเที่ยววิ่งรายเส้นทางประจำเดือน</h3>
-        <div class="desc">แสดงเฉพาะเส้นทางที่มีเที่ยววิ่ง (&gt; 0)</div>
-        <div class="chart-wrap"><canvas id="tripsChart"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <h3>น้ำมันขาด/เกิน (%) รายเส้นทาง</h3>
-        <div class="desc">เรียงจากขาดมากสุดไปเกินมากสุด</div>
-        <div class="chart-wrap"><canvas id="fuelDiffBig"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <h3>ยอดขายลิตรย้อนหลัง 12 เดือน</h3>
-        <div class="desc">รวมทุกเส้นทางตามตัวกรอง BU ปัจจุบัน</div>
-        <div class="chart-wrap"><canvas id="trendLiters"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <h3>กำไรขั้นต้นย้อนหลัง 12 เดือน</h3>
-        <div class="desc">รวมทุกเส้นทางตามตัวกรอง BU ปัจจุบัน</div>
-        <div class="chart-wrap"><canvas id="trendGP"></canvas></div>
+    <h3 class="block-subtitle"><span class="zone-tag">ZONE 2</span> กราฟเจาะลึกที่ตารางแทนไม่ได้</h3>
+    <div class="zone2-vibrant">
+      <div class="focus-grid">
+        <div class="chart-card full-span">
+          <div class="badge-highlight" id="z2BadgeLiters" style="color:#2563eb;background:rgba(37,99,235,.1);"></div>
+          <h3>ยอดขายลิตรย้อนหลัง 12 เดือน</h3>
+          <div class="desc">รวมทุกเส้นทางตามตัวกรอง BU ปัจจุบัน</div>
+          <div class="chart-wrap"><canvas id="trendLiters"></canvas></div>
+        </div>
+        <div class="chart-card full-span">
+          <div class="badge-highlight" id="z2BadgeGP" style="color:#10b981;background:rgba(16,185,129,.1);"></div>
+          <h3>กำไรขั้นต้นย้อนหลัง 12 เดือน</h3>
+          <div class="desc">รวมทุกเส้นทางตามตัวกรอง BU ปัจจุบัน</div>
+          <div class="chart-wrap"><canvas id="trendGP"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="badge-highlight" id="z2BadgeTrips" style="color:#6366f1;background:rgba(99,102,241,.1);"></div>
+          <h3>จำนวนเที่ยววิ่งรายเส้นทางประจำเดือน</h3>
+          <div class="desc">แสดงเฉพาะเส้นทางที่มีเที่ยววิ่ง (&gt; 0)</div>
+          <div class="chart-wrap"><canvas id="tripsChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="badge-highlight" id="z2BadgeFuelDiff" style="color:#fb7185;background:rgba(251,113,133,.12);"></div>
+          <h3>น้ำมันขาด/เกิน (%) รายเส้นทาง</h3>
+          <div class="desc">เรียงจากขาดมากสุดไปเกินมากสุด · แถบเขียวอ่อน = ช่วงในเกณฑ์ปกติ</div>
+          <div class="chart-wrap"><canvas id="fuelDiffBig"></canvas></div>
+        </div>
+        <div class="chart-card full-span">
+          <div class="badge-highlight" id="z2BadgeScatter" style="color:var(--text-secondary);background:color-mix(in srgb, var(--text-secondary) 10%, transparent);"></div>
+          <h3>ความสัมพันธ์ ค่าซ่อม vs อัตราการใช้น้ำมัน</h3>
+          <div class="desc">แต่ละจุด = 1 เส้นทาง (Route ID) · ขนาดจุด = ยอดขายลิตร · สี = BU</div>
+          <div class="chart-wrap"><canvas id="scatterChart"></canvas></div>
+        </div>
       </div>
     </div>
   </section>
@@ -439,7 +540,7 @@
 
   <section class="block zone-panel" id="zonePanel4">
     <h2 class="block-title"><span class="zone-tag">ZONE 4</span> รายการซ่อมประจำเดือน (จากชีตซ่อมบำรุง) <span class="n" id="repairTitle"></span></h2>
-    <div id="repairZoneStatus" style="font-size:13px;color:var(--text-muted);margin-bottom:12px;"></div>
+    <div id="repairZoneStatus" style="font-size:14.5px;color:var(--text-muted);margin-bottom:12px;"></div>
 
     <div class="repair-kpi-grid">
       <div class="repair-kpi-card">
@@ -520,38 +621,44 @@
         <select id="repairTagFilter"><option value="ALL">ทุกประเภทงาน</option></select>
         <select id="repairShopFilter"><option value="ALL">ทุกศูนย์ซ่อม</option></select>
       </div>
-      <div class="view-toggle">
-        <button id="repairViewTable" class="active">ตารางปกติ</button>
-        <button id="repairViewAccordion">จัดกลุ่มตามทะเบียนรถ</button>
-      </div>
     </div>
 
-    <div class="card full-table-wrap" id="repairTableWrap">
-      <table class="data-table" id="repairItemsTable">
-        <thead>
-          <tr>
-            <th data-key="bu">BU <span class="sort-arrow">↕</span></th>
-            <th data-key="vehicle">ทะเบียนรถ <span class="sort-arrow">↕</span></th>
-            <th data-key="routeId" style="text-align:left;">Route ID (ตอนซ่อม) <span class="sort-arrow">↕</span></th>
-            <th data-key="item">รายการซ่อม <span class="sort-arrow">↕</span></th>
-            <th data-key="shop">ศูนย์ซ่อม <span class="sort-arrow">↕</span></th>
-            <th data-key="cost" style="text-align:right;">ค่าใช้จ่าย <span class="sort-arrow">↕</span></th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-    <div id="repairAccordionWrap" style="display:none;"></div>
+    <div id="repairAccordionWrap"></div>
     <div class="foot-note">"ประเภทงาน" (อะไหล่ / ค่าแรง / ยาง) จัดหมวดอัตโนมัติจากคำในชื่อรายการซ่อม อาจไม่ตรง 100% — ถ้าต้องการความแม่นยำเต็มที่ แนะนำเพิ่มคอลัมน์ "ประเภทงาน" ในชีต "ซ่อมบำรุง" โดยตรง</div>
   </section>
 
   <section class="block zone-panel" id="zonePanel5">
     <h2 class="block-title"><span class="zone-tag">ZONE 5</span> จุดที่ควรเฝ้าระวัง <span class="n" id="excTitle"></span></h2>
-    <div class="exception-list" id="exceptionList"></div>
+
+    <div class="sev-summary" id="sevSummary">
+      <div class="sev-pill active" data-sev="ALL"><span class="emoji">📋</span><div><div class="count" id="sevCountAll">0</div><div class="lbl">ทั้งหมด</div></div></div>
+      <div class="sev-pill" data-sev="critical"><span class="emoji">🔴</span><div><div class="count" style="color:var(--critical);" id="sevCountCritical">0</div><div class="lbl">วิกฤต</div></div></div>
+      <div class="sev-pill" data-sev="serious"><span class="emoji">🟠</span><div><div class="count" style="color:var(--serious);" id="sevCountSerious">0</div><div class="lbl">ต้องดู</div></div></div>
+      <div class="sev-pill" data-sev="warning"><span class="emoji">🟡</span><div><div class="count" style="color:#8a6200;" id="sevCountWarning">0</div><div class="lbl">เฝ้าระวัง</div></div></div>
+    </div>
+
+    <div class="exc-filter-row">
+      <select id="excSeverityFilter">
+        <option value="ALL">ทุกระดับความรุนแรง</option>
+        <option value="critical">🔴 วิกฤต</option>
+        <option value="serious">🟠 ต้องดู</option>
+        <option value="warning">🟡 เฝ้าระวัง</option>
+      </select>
+      <select id="excRuleFilter"><option value="ALL">ทุกประเภทปัญหา</option></select>
+      <span class="clear-btn" id="excClearFilters">ล้างตัวกรอง</span>
+    </div>
+
+    <div class="alert-col-header">
+      <span>ระดับ</span><span>ประเด็น</span><span>เส้นทาง / รถ</span><span>ค่าที่เกิดขึ้น</span><span>เกณฑ์อ้างอิง</span><span></span>
+    </div>
+    <div class="alert-table" id="alertTable"></div>
+    <div class="alert-empty-state" id="alertEmptyState" style="display:none;">ไม่พบรายการที่ตรงกับตัวกรอง</div>
   </section>
 
 </main>
 </div>
+
+<div id="z2Tooltip"></div>
 
 <script>
 function loadScriptWithFallback(paths, testFn) {
@@ -655,7 +762,7 @@ let RAW = [];
 let RAW_REPAIR = [];
 let TARGET_CASH_BY_BU = {};
 let FUEL_DIFF_TOLERANCE_PCT = 0.5;
-let STATE = { ym: null, bu: 'ALL', search: '', sortKey: 'liters', sortDir: 'desc', repairSortKey: 'cost', repairSortDir: 'desc', repairSearch: '', repairTag: 'ALL', repairShop: 'ALL', repairView: 'table', repairYtdMode: 'TOP3', repairYtdVehicle: '' };
+let STATE = { ym: null, bu: 'ALL', search: '', sortKey: 'liters', sortDir: 'desc', repairSearch: '', repairTag: 'ALL', repairShop: 'ALL', repairYtdMode: 'TOP3', repairYtdVehicle: '', excSeverity: 'ALL', excRule: 'ALL' };
 let CHARTS = {};
 let LAST_ROWDATA = [];
 
@@ -866,13 +973,18 @@ function initFilters() {
   });
 
   document.querySelectorAll('.zone-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.zone-tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.zone-panel').forEach(p => p.classList.remove('active'));
-      tab.classList.add('active');
-      document.getElementById(tab.getAttribute('data-zone')).classList.add('active');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
+    tab.addEventListener('click', () => switchZoneTab(tab.getAttribute('data-zone')));
+  });
+
+  document.querySelectorAll('.sev-pill').forEach(pill => {
+    pill.addEventListener('click', () => { STATE.excSeverity = pill.getAttribute('data-sev'); renderAlertTable(); });
+  });
+  document.getElementById('excSeverityFilter').addEventListener('change', (e) => { STATE.excSeverity = e.target.value; renderAlertTable(); });
+  document.getElementById('excRuleFilter').addEventListener('change', (e) => { STATE.excRule = e.target.value; renderAlertTable(); });
+  document.getElementById('excClearFilters').addEventListener('click', () => {
+    STATE.excSeverity = 'ALL'; STATE.excRule = 'ALL';
+    document.getElementById('excRuleFilter').value = 'ALL';
+    renderAlertTable();
   });
 
   const repairSearchInput = document.getElementById('repairSearchInput');
@@ -898,20 +1010,17 @@ function initFilters() {
     renderRepairZone();
   });
   document.getElementById('repairShopFilter').addEventListener('change', (e) => { STATE.repairShop = e.target.value; renderRepairZone(); });
-  document.getElementById('repairViewTable').addEventListener('click', () => { STATE.repairView = 'table'; renderRepairZone(); });
-  document.getElementById('repairViewAccordion').addEventListener('click', () => { STATE.repairView = 'accordion'; renderRepairZone(); });
-  document.querySelectorAll('#repairItemsTable thead th').forEach(th => {
-    th.addEventListener('click', () => {
-      const key = th.getAttribute('data-key');
-      if (STATE.repairSortKey === key) { STATE.repairSortDir = STATE.repairSortDir === 'desc' ? 'asc' : 'desc'; }
-      else { STATE.repairSortKey = key; STATE.repairSortDir = 'desc'; }
-      renderRepairZone();
-    });
-  });
 }
 
 function getRows(ym, bu) { return RAW.filter(r => r.ym === ym && (bu === 'ALL' || r.bu === bu)); }
 function destroyChart(id) { if (CHARTS[id]) { CHARTS[id].destroy(); delete CHARTS[id]; } }
+// Switches the visible zone panel — used by the top zone-tab bar and by
+// Zone 5's alert-row drill-down buttons (onclick="switchZoneTab('zonePanelN')").
+function switchZoneTab(panelId) {
+  document.querySelectorAll('.zone-tab').forEach(t => t.classList.toggle('active', t.getAttribute('data-zone') === panelId));
+  document.querySelectorAll('.zone-panel').forEach(p => p.classList.toggle('active', p.id === panelId));
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
 // Groups rows by Route ID (the stable operational unit — a route keeps its
 // identity even when the physical vehicle serving it changes month to month).
@@ -935,17 +1044,21 @@ function byVeh(rows) {
 function setKpi(id, text) { document.getElementById(id).textContent = text; }
 function renderDelta(elId, curVal, prevVal, opts = {}) {
   const el = document.getElementById(elId);
-  if (prevVal === null || prevVal === undefined) { el.innerHTML = `<span class="delta flat">ไม่มีข้อมูลปีก่อน</span>`; return; }
+  const label = opts.label || 'จากปีก่อน';
+  if (prevVal === null || prevVal === undefined) { el.innerHTML = `<span class="delta flat">ไม่มีข้อมูล${label.startsWith('จากเดือน') ? 'เดือนก่อน' : 'ปีก่อน'}</span>`; return; }
   const gap = pct(curVal, prevVal);
-  if (gap === null) { el.innerHTML = `<span class="delta flat">ไม่มีข้อมูลปีก่อน</span>`; return; }
-  const dir = gap >= 0 ? 'up' : 'down';
-  el.innerHTML = `<span class="delta ${dir}">${gap >= 0 ? '▲' : '▼'} ${fmt(Math.abs(gap), 1)}% จากปีก่อน</span>`;
+  if (gap === null) { el.innerHTML = `<span class="delta flat">ไม่มีข้อมูล${label.startsWith('จากเดือน') ? 'เดือนก่อน' : 'ปีก่อน'}</span>`; return; }
+  // opts.invert flips the good/bad color mapping — used for metrics where a
+  // decrease is the desirable direction (e.g. repair cost going down is good).
+  const isGood = opts.invert ? gap <= 0 : gap >= 0;
+  const dir = isGood ? 'up' : 'down';
+  el.innerHTML = `<span class="delta ${dir}">${gap >= 0 ? '▲' : '▼'} ${fmt(Math.abs(gap), 1)}% ${label}</span>`;
 }
-function sparkline(canvasId, data, color, c) {
+function sparkline(canvasId, data, color, c, opts = {}) {
   destroyChart(canvasId);
   CHARTS[canvasId] = new Chart(document.getElementById(canvasId), {
     type: 'line',
-    data: { labels: data.map(() => ''), datasets: [{ data, borderColor: color, borderWidth: 2, pointRadius: 0, tension: 0.35, fill: false }] },
+    data: { labels: data.map(() => ''), datasets: [{ data, borderColor: color, borderWidth: 2, pointRadius: 0, tension: 0.35, fill: !!opts.fill, backgroundColor: opts.fill ? color + '22' : undefined }] },
     options: { responsive: true, maintainAspectRatio: false, scales: { x: { display: false }, y: { display: false } }, plugins: { legend: { display: false }, tooltip: { enabled: false } } },
   });
 }
@@ -1000,8 +1113,35 @@ function renderAll() {
   const trailMonths = monthsTrailing(ym, 12);
   const trailLitersArr = trailMonths.map(m => { const rs = getRows(m, bu); return sum(rs, 'cashL') + sum(rs, 'creditL'); });
   const trailGPArr = trailMonths.map(m => sum(getRows(m, bu), 'grossProfit'));
+  const trailFuelRateArr = trailMonths.map(m => { const rs = getRows(m, bu).filter(r => r.fuelRate); return rs.length ? avg(rs.map(r => r.fuelRate)) : 0; });
+  const trailRepairArr = trailMonths.map(m => sum(getRows(m, bu), 'repairCost'));
   sparkline('sparkLiters', trailLitersArr, c.s1, c);
-  sparkline('sparkGP', trailGPArr, c.s6, c);
+  sparkline('sparkGP', trailGPArr, c.good, c, { fill: true });
+  sparkline('sparkFuelRate', trailFuelRateArr, c.s4, c);
+  sparkline('sparkRepair', trailRepairArr, c.critical, c, { fill: true });
+
+  // Card 1 "% ของเป้า" — same targetLiters-based formula/thresholds already used
+  // per-route in Zone 3's sales cell (targetBulletCellHtml/salesCellHtml), just
+  // aggregated fleet-wide here.
+  const targetLitersTotal = sum(curRows, 'targetLiters');
+  const targetAchievePct = targetLitersTotal > 0 ? 100 * curLiters / targetLitersTotal : null;
+  const pillEl = document.getElementById('kpiLitersTargetPill');
+  if (targetAchievePct === null) {
+    pillEl.innerHTML = `<span class="target-pill" style="color:var(--text-muted);background:color-mix(in srgb, var(--text-muted) 12%, transparent);">ไม่มีเป้า</span>`;
+  } else {
+    const okColor = targetAchievePct >= 100 ? 'var(--good)' : (targetAchievePct >= 80 ? 'var(--series-2)' : 'var(--critical)');
+    const okIcon = targetAchievePct >= 100 ? '✓' : (targetAchievePct >= 80 ? '' : '✗');
+    pillEl.innerHTML = `<span class="target-pill" style="color:${okColor};background:color-mix(in srgb, ${okColor} 14%, transparent);">${okIcon} ${fmt(targetAchievePct, 1)}% ของเป้า</span>`;
+  }
+
+  // Card 6 "ค่าซ่อมบำรุงรวม" — same repairCost figure already summed per
+  // BU+month for Zone 3/4; compared month-over-month (not YoY like the other
+  // cards) since repair spend is noisy and a MoM read is more actionable.
+  const curRepairTotal = sum(curRows, 'repairCost');
+  const prevMonthYm = prevMonthYM(ym);
+  const prevMonthRepairTotal = sum(getRows(prevMonthYm, bu), 'repairCost');
+  setKpi('kpiRepairTotal', fmt(curRepairTotal, 2));
+  renderDelta('kpiRepairDelta', curRepairTotal, prevMonthRepairTotal || null, { label: 'จากเดือนก่อน', invert: true });
 
   const routeIds = [...new Set(curRows.map(r => r.routeId))];
   const curByVeh = byVeh(curRows);
@@ -1050,6 +1190,41 @@ function renderAll() {
   renderFuelDiffBig(rowData, c);
   renderTrend(ym, bu, c);
   renderRepairZone();
+  // Runs after renderExceptions() so FLAGGED_ROUTES is already populated for this month.
+  renderAlertBar(rowData);
+}
+
+// Quick Executive Alert Bar (Zone 1) — summarizes, in at most 3 lines, the
+// most important things to look at this month. Both signals are read from
+// numbers the dashboard already computes elsewhere (not new logic):
+//   1) how many routes are flagged in Zone 5 this month (FLAGGED_ROUTES,
+//      populated by renderExceptions() just above)
+//   2) whether any single vehicle's repair cost this month exceeds the same
+//      ฿10,000 warning threshold already used for the Zone 3/4 badges
+// When neither signal fires, shows a reassuring green "no issues" message
+// instead of hiding the bar (per user confirmation).
+function renderAlertBar(rowData) {
+  const el = document.getElementById('zone1AlertBar');
+  const lines = [];
+
+  const flaggedCount = FLAGGED_ROUTES.size;
+  if (flaggedCount > 0) {
+    lines.push(`<span class="tag">รายงานสภาวะ:</span>พบ <b>${flaggedCount} เส้นทาง</b> ติดรายการเฝ้าระวัง (ดูรายละเอียดที่ Zone 5)`);
+  }
+
+  let topRepair = { vehicle: '-', repair: 0 };
+  rowData.forEach(r => { if (r.repair > topRepair.repair) topRepair = { vehicle: r.vehicle, repair: r.repair }; });
+  if (topRepair.repair > REPAIR_COST_WARN_THB) {
+    lines.push(`รถทะเบียน <b>${escapeHtml(topRepair.vehicle)}</b> มีค่าซ่อมบำรุงสูงกว่าปกติเดือนนี้ — ฿${fmt(topRepair.repair, 2)} (เกณฑ์ ฿${fmt(REPAIR_COST_WARN_THB)})`);
+  }
+
+  if (!lines.length) {
+    el.classList.add('ok');
+    el.innerHTML = `<span class="icon">✅</span><div class="lines"><div><span class="tag">รายงานสภาวะ:</span>ไม่มีประเด็นสำคัญที่ต้องเฝ้าระวังเป็นพิเศษในเดือนนี้</div></div>`;
+    return;
+  }
+  el.classList.remove('ok');
+  el.innerHTML = `<span class="icon">⚠️</span><div class="lines">${lines.slice(0, 3).map(l => `<div>${l}</div>`).join('')}</div>`;
 }
 
 // ---------------------------------------------------------------------
@@ -1101,22 +1276,70 @@ function renderExceptions(rowData, c) {
 
   document.getElementById('excTitle').textContent = `(${alerts.length} รายการ)`;
   FLAGGED_ROUTES = new Set(alerts.map(a => a.routeId));
+  LAST_ALERTS = alerts;
 
-  const list = document.getElementById('exceptionList');
-  if (!alerts.length) { list.innerHTML = `<div style="color:var(--text-muted);font-size:15px;">ไม่พบจุดที่ต้องเฝ้าระวังในเดือนนี้</div>`; return; }
-  const sevLabel = { critical: 'วิกฤต', serious: 'ต้องดู', warning: 'เฝ้าระวัง' };
-  list.innerHTML = alerts.map(a => `
-    <div class="exception-row ${a.severity}">
-      <span class="sev-icon">${a.icon}</span>
-      <span class="sev-label">${sevLabel[a.severity]}</span>
-      <span class="rule-name">${escapeHtml(a.rule)}</span>
-      <span class="veh-name">${escapeHtml(a.routeId)} <span style="color:var(--text-muted);font-weight:400;">(${escapeHtml(a.vehicle)})</span></span>
-      <span class="value-text">${escapeHtml(a.valueText)}</span>
-      <span class="threshold-text">${escapeHtml(a.thresholdText)}</span>
-    </div>
-  `).join('');
+  document.getElementById('sevCountAll').textContent = alerts.length;
+  document.getElementById('sevCountCritical').textContent = alerts.filter(a => a.severity === 'critical').length;
+  document.getElementById('sevCountSerious').textContent = alerts.filter(a => a.severity === 'serious').length;
+  document.getElementById('sevCountWarning').textContent = alerts.filter(a => a.severity === 'warning').length;
+
+  // Rule-type filter options — built from the rule names actually present this
+  // month (rather than a hardcoded list) so the dropdown never shows an empty option.
+  const ruleFilterEl = document.getElementById('excRuleFilter');
+  const ruleNames = [...new Set(alerts.map(a => a.rule))];
+  if (ruleFilterEl.dataset.count != ruleNames.length) {
+    const keepValue = ruleNames.includes(STATE.excRule) ? STATE.excRule : 'ALL';
+    ruleFilterEl.innerHTML = '<option value="ALL">ทุกประเภทปัญหา</option>' +
+      ruleNames.map(r => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('');
+    STATE.excRule = keepValue;
+    ruleFilterEl.value = keepValue;
+    ruleFilterEl.dataset.count = ruleNames.length;
+  }
+
+  renderAlertTable();
 }
 let FLAGGED_ROUTES = new Set();
+let LAST_ALERTS = [];
+
+// Each rule type drills down to whichever zone shows that data in most detail
+// (confirmed with the user): ค่าซ่อมสูงผิดปกติ→Zone4, กำไรขั้นต้น/ลิตรต่ำ→Zone3,
+// ยอดขายหดตัว→Zone2, น้ำมันขาด/เกิน→Zone3, อัตราการใช้น้ำมันต่ำ→Zone2.
+// Zone 2's charts now live merged into Zone 1's panel (below the KPI cards),
+// so any "Zone 2" drill-down target points at zonePanel1, not a separate tab.
+const RULE_DRILL = {
+  'ค่าซ่อมสูงผิดปกติ': { zone: 'zonePanel4', label: 'ดูค่าซ่อม' },
+  'กำไรขั้นต้น/ลิตรต่ำผิดปกติ': { zone: 'zonePanel3', label: 'ดูผลประกอบการ' },
+  'ยอดขายหดตัวจากปีก่อน': { zone: 'zonePanel1', label: 'ดูแนวโน้ม' },
+  'น้ำมันขาด/เกินนอกเป้า': { zone: 'zonePanel3', label: 'ดูยอดขาย' },
+  'อัตราการใช้น้ำมันต่ำกว่ากองรถ': { zone: 'zonePanel1', label: 'ดูประสิทธิภาพ' },
+};
+const EXC_SEV_LABEL = { critical: 'วิกฤต', serious: 'ต้องดู', warning: 'เฝ้าระวัง' };
+
+function renderAlertTable() {
+  const sevFilter = STATE.excSeverity || 'ALL';
+  const ruleFilter = STATE.excRule || 'ALL';
+  const filtered = LAST_ALERTS.filter(a => (sevFilter === 'ALL' || a.severity === sevFilter) && (ruleFilter === 'ALL' || a.rule === ruleFilter));
+
+  document.querySelectorAll('.sev-pill').forEach(p => p.classList.toggle('active', p.getAttribute('data-sev') === sevFilter));
+  document.getElementById('excSeverityFilter').value = sevFilter;
+
+  const table = document.getElementById('alertTable');
+  const emptyEl = document.getElementById('alertEmptyState');
+  emptyEl.style.display = filtered.length ? 'none' : 'block';
+  emptyEl.textContent = LAST_ALERTS.length ? 'ไม่พบรายการที่ตรงกับตัวกรอง' : 'ไม่พบจุดที่ต้องเฝ้าระวังในเดือนนี้';
+  table.innerHTML = filtered.map(a => {
+    const drill = RULE_DRILL[a.rule] || { zone: 'zonePanel3', label: 'ดูรายละเอียด' };
+    return `
+    <div class="alert-row ${a.severity}">
+      <div><span class="sev-badge">${a.icon} ${EXC_SEV_LABEL[a.severity]}</span></div>
+      <div class="issue-title">${escapeHtml(a.rule)}</div>
+      <div class="target-subject"><b>${escapeHtml(a.routeId)}</b><br>(${escapeHtml(a.vehicle)})</div>
+      <div class="actual-value ${a.severity}">${escapeHtml(a.valueText)}</div>
+      <div class="benchmark-text">${escapeHtml(a.thresholdText)}</div>
+      <div><button class="drill-btn" onclick="switchZoneTab('${drill.zone}')">${drill.label} →</button></div>
+    </div>`;
+  }).join('');
+}
 
 // ---------------------------------------------------------------------
 // Zone 3a — Unified performance table with in-cell mini visualizations
@@ -1168,23 +1391,27 @@ function targetBulletCellHtml(actual, target, max, color, unit = '', decimals = 
 // when healthy (>= 1.50 บ./ล., adjustable) or orange when thin but still positive;
 // red if the route is actually losing money per liter.
 const GP_PER_LITER_HEALTHY = 1.50;
+// Primary line = total gross profit; secondary line shows only กำไร/ลิตร (the
+// figure people actually scan for), with ราคาขาย/ลิตร and ต้นทุน/ลิตร moved
+// into a hover tooltip (native title attr) instead of cluttering the row.
 function financialsCellHtml(gp, costPerLiter, gpPerLiter) {
   const sellPerLiter = costPerLiter + gpPerLiter;
   const gplColor = gpPerLiter < 0 ? 'var(--critical)' : (gpPerLiter >= GP_PER_LITER_HEALTHY ? 'var(--good)' : 'var(--series-2)');
+  const tooltip = `ราคาขาย/ลิตร ฿${fmt(sellPerLiter, 2)} · ต้นทุน/ลิตร ฿${fmt(costPerLiter, 2)}`;
   return `<div class="cell-flex">
     <div class="text-primary-strong">฿${fmt(gp)}</div>
-    <div class="cell-label" style="white-space:normal;max-width:260px;">ราคาขาย/ลิตร ${fmt(sellPerLiter, 2)} &nbsp;|&nbsp; ต้นทุน/ลิตร ${fmt(costPerLiter, 2)} &nbsp;|&nbsp; กำไร/ลิตร <b style="color:${gplColor}">${fmt(gpPerLiter, 2)}</b></div>
+    <div class="cell-label"><span class="hint-underline" title="${escapeHtml(tooltip)}">กำไร <b style="color:${gplColor}">฿${fmt(gpPerLiter, 2)}</b>/ล.</span></div>
   </div>`;
 }
 // Merged "ค่าซ่อม & ประสิทธิภาพน้ำมัน (Maintenance & Efficiency)" cell — no
-// bar/sparkline (per the approved mockup). ยอดค่าซ่อม > ฿10,000 is bolded red
-// with a ⚠️ icon; the fuel-rate line colors green/red against its per-route
-// target when one exists.
+// bar/sparkline. ยอดค่าซ่อม > ฿10,000 renders as bold red text with a ⚠️ icon
+// (no solid pill background, per the low-noise redesign); the fuel-rate line
+// colors green/red against its per-route target when one exists.
 const REPAIR_COST_WARN_THB = 10000;
 function maintenanceCellHtml(repair, fuelRate, targetFuelRate) {
   const hot = repair > REPAIR_COST_WARN_THB;
   const repairLine = hot
-    ? `<div><span class="verdict critical">⚠️ ฿${fmt(repair)}</span></div>`
+    ? `<div><span style="font-weight:800;color:var(--critical);">⚠️ ฿${fmt(repair)}</span></div>`
     : `<div class="text-primary-strong">฿${fmt(repair)}</div>`;
   let fuelLine;
   if (targetFuelRate !== null && targetFuelRate !== undefined && targetFuelRate > 0) {
@@ -1195,10 +1422,16 @@ function maintenanceCellHtml(repair, fuelRate, targetFuelRate) {
   }
   return `<div class="cell-flex">${repairLine}${fuelLine}</div>`;
 }
+// Cash-target gap is a plain percentage-POINT difference (cashPct - targetCashPct),
+// so it is mathematically bounded to roughly ±100 already. As a guard against a
+// bad/corrupted value in the Targets sheet ever producing an absurd number like
+// "1,966.7%", anything outside a sane ±100pt range is treated as "ไม่มีเป้า"
+// rather than displayed as-is.
+const CASH_GAP_SANITY_LIMIT = 100;
 function cashCreditCellHtml(cashPct, creditPct, targetCashPct, cashPctGap, c) {
   const ratioText = `<div class="text-primary-strong" style="text-align:center;">${fmt(cashPct, 0)}% : ${fmt(creditPct, 0)}%</div>`;
   let verdict = '';
-  if (targetCashPct != null) {
+  if (targetCashPct != null && Math.abs(cashPctGap) <= CASH_GAP_SANITY_LIMIT) {
     const good = cashPctGap >= 0;
     verdict = `<div class="cell-label" style="text-align:center;"><span style="color:${good ? 'var(--good)' : 'var(--critical)'};font-weight:600;">${good ? '▲' : '▼'} เงินสด${good ? 'เกินเป้า' : 'ต่ำกว่าเป้า'} ${fmt(Math.abs(cashPctGap), 1)}%</span></div>`;
   } else {
@@ -1246,33 +1479,62 @@ function renderTable(rowData) {
 }
 
 // ---------------------------------------------------------------------
-// Zone 2 — Focus charts
+// Zone 2 — Focus charts ("Modern Vibrant" redesign — intentionally more
+// colorful than the rest of the dashboard; see .zone2-vibrant in <style>)
 // ---------------------------------------------------------------------
+const Z2_COLORS = { blue: '#2563eb', cyan: '#06b6d4', emerald: '#10b981', indigo: '#6366f1', coral: '#fb7185', coralLight: '#fecdd3' };
+// Shared glassmorphism tooltip (external, so we can blur/round it like the
+// approved mockup — Chart.js's built-in tooltip can't do backdrop-filter).
+function z2ExternalTooltip(context) {
+  const { chart, tooltip } = context;
+  const el = document.getElementById('z2Tooltip');
+  if (tooltip.opacity === 0) { el.style.opacity = 0; return; }
+  const dp = (tooltip.dataPoints || []).filter(d => d.dataset.z2Skip !== true);
+  if (!dp.length) { el.style.opacity = 0; return; }
+  let html = `<div class="tt-title">${escapeHtml(String(tooltip.title[0] || ''))}</div>`;
+  dp.forEach(d => {
+    const color = d.dataset.borderColor || d.dataset.backgroundColor || '#666';
+    html += `<div class="tt-row"><span class="tt-dot" style="background:${typeof color === 'string' ? color : '#666'};"></span>${d.dataset.z2Label ? escapeHtml(d.dataset.z2Label(d)) : escapeHtml(d.formattedValue)}</div>`;
+  });
+  el.innerHTML = html;
+  const canvasRect = chart.canvas.getBoundingClientRect();
+  el.style.opacity = 1;
+  el.style.left = (canvasRect.left + tooltip.caretX + 12) + 'px';
+  el.style.top = (canvasRect.top + tooltip.caretY - 10) + 'px';
+}
+function z2VGradient(ctx, area, colorTop, colorBottom) {
+  const g = ctx.createLinearGradient(0, area.top, 0, area.bottom);
+  g.addColorStop(0, colorTop); g.addColorStop(1, colorBottom);
+  return g;
+}
+const z2GridStyle = (c) => ({ color: c.grid, borderDash: [4, 4] });
+
 function renderScatter(rowData, c) {
   destroyChart('scatter');
+  document.getElementById('z2BadgeScatter').textContent = `${rowData.length} เส้นทาง`;
   const bus = [...new Set(rowData.map(r => r.bu))];
-  const colorSeq = [c.s1, c.s2, c.s3, c.s4, c.s7, c.s5];
-  const buColor = {};
-  bus.forEach((bu, i) => { buColor[bu] = colorSeq[i % colorSeq.length]; });
+  const bubbleColors = [Z2_COLORS.blue, Z2_COLORS.coral, Z2_COLORS.emerald, Z2_COLORS.indigo];
   const maxLiters = Math.max(1, ...rowData.map(r => r.liters));
   CHARTS.scatter = new Chart(document.getElementById('scatterChart'), {
     type: 'bubble',
-    data: { datasets: bus.map(bu => ({
+    data: { datasets: bus.map((bu, i) => ({
       label: bu,
       data: rowData.filter(r => r.bu === bu).map(r => ({ x: r.repair, y: r.fuelRate, r: 4 + 14 * Math.sqrt(r.liters / maxLiters), routeId: r.routeId, vehicle: r.vehicle })),
-      backgroundColor: buColor[bu] + 'cc',
+      backgroundColor: color_mix_alpha(bubbleColors[i % bubbleColors.length], 0.45),
+      borderColor: bubbleColors[i % bubbleColors.length], borderWidth: 1.5,
+      z2Label: (dp) => { const d = dp.raw; return `ค่าซ่อม ฿${fmt(d.x)} · ${fmt(d.y, 2)} กม./ล.`; },
     })) },
     options: {
       responsive: true, maintainAspectRatio: false,
       scales: {
-        x: { title: { display: true, text: 'ค่าซ่อม (฿)', color: c.muted }, ticks: { color: c.muted }, grid: { color: c.grid } },
-        y: { title: { display: true, text: 'อัตราการใช้น้ำมัน (กม./ล.)', color: c.muted }, ticks: { color: c.muted }, grid: { color: c.grid } },
+        x: { title: { display: true, text: 'ค่าซ่อม (฿)', color: c.muted }, ticks: { color: c.muted }, grid: z2GridStyle(c) },
+        y: { title: { display: true, text: 'อัตราการใช้น้ำมัน (กม./ล.)', color: c.muted }, ticks: { color: c.muted }, grid: z2GridStyle(c) },
       },
       plugins: {
         legend: { position: 'bottom', labels: { color: c.textSecondary } },
         tooltip: {
-          backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1,
-          callbacks: { label: (ctx) => { const d = ctx.raw; return `${d.routeId} (${d.vehicle}) · ค่าซ่อม ฿${fmt(d.x)} · ${fmt(d.y, 2)} กม./ล.`; } },
+          enabled: false, external: z2ExternalTooltip,
+          callbacks: { title: (items) => { const d = items[0].raw; return `${d.routeId} (${d.vehicle})`; } },
         },
       },
     },
@@ -1281,30 +1543,47 @@ function renderScatter(rowData, c) {
 function renderTrips(rowData, c) {
   destroyChart('tripsChart');
   const sorted = rowData.filter(r => r.trips > 0).sort((a, b) => b.trips - a.trips);
+  document.getElementById('z2BadgeTrips').textContent = sorted.length ? `สูงสุด: ${sorted[0].routeId}` : '-';
   const labels = sorted.map(r => r.routeId);
   const data = sorted.map(r => r.trips);
   CHARTS.tripsChart = new Chart(document.getElementById('tripsChart'), {
     type: 'bar',
-    data: { labels, datasets: [{ label: 'จำนวนเที่ยววิ่ง', data, backgroundColor: c.s1, borderRadius: 4, borderSkipped: false, barPercentage: 0.7, categoryPercentage: 0.75 }] },
+    data: { labels, datasets: [{
+      label: 'จำนวนเที่ยววิ่ง', data, borderRadius: 8, borderSkipped: false, barPercentage: 0.7, categoryPercentage: 0.75,
+      backgroundColor: (ctx) => { const { chartArea } = ctx.chart; if (!chartArea) return Z2_COLORS.indigo;
+        const g = ctx.chart.ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
+        g.addColorStop(0, Z2_COLORS.indigo); g.addColorStop(1, Z2_COLORS.cyan); return g; },
+      z2Label: (dp) => `${fmt(dp.raw)} เที่ยว`,
+    }] },
     options: {
       responsive: true, maintainAspectRatio: false,
-      scales: { x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 12 } } }, y: { grid: { color: c.grid }, ticks: { color: c.muted, font: { size: 12 } }, border: { display: false } } },
-      plugins: { legend: { display: false }, tooltip: { backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1, padding: 10, cornerRadius: 8, callbacks: { label: (ctx) => fmt(ctx.parsed.y) + ' เที่ยว' } } },
+      scales: { x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 12 } } }, y: { grid: z2GridStyle(c), ticks: { color: c.muted, font: { size: 12 } }, border: { display: false } } },
+      plugins: { legend: { display: false }, tooltip: { enabled: false, external: z2ExternalTooltip } },
     },
   });
 }
 function renderFuelDiffBig(rowData, c) {
   destroyChart('fuelDiffBig');
   const sorted = [...rowData].sort((a, b) => a.fuelDiffPct - b.fuelDiffPct);
+  if (sorted.length) document.getElementById('z2BadgeFuelDiff').textContent = `แย่สุด: ${fmtSigned(sorted[0].fuelDiffPct, 1)}%`;
   const labels = sorted.map(r => r.routeId);
   const data = sorted.map(r => r.fuelDiffPct);
+  const safeBand = labels.map(() => FUEL_DIFF_TOLERANCE_PCT);
   CHARTS.fuelDiffBig = new Chart(document.getElementById('fuelDiffBig'), {
     type: 'bar',
-    data: { labels, datasets: [{ data, backgroundColor: data.map(v => v < 0 ? c.critical : c.good), borderRadius: 4 }] },
+    data: { labels, datasets: [
+      { label: 'เกณฑ์ปกติ', data: safeBand, backgroundColor: color_mix_alpha(c.good, 0.12), borderWidth: 0, barPercentage: 1, categoryPercentage: 1, order: 2, z2Skip: true },
+      { label: 'เกณฑ์ปกติ (ขาด)', data: safeBand.map(v => -v), backgroundColor: color_mix_alpha(c.good, 0.12), borderWidth: 0, barPercentage: 1, categoryPercentage: 1, order: 2, z2Skip: true },
+      { label: 'น้ำมันขาด/เกิน', data, borderRadius: 6, order: 1, z2Label: (dp) => `${fmtSigned(dp.raw, 2)}%`,
+        backgroundColor: (ctx) => { const { chartArea } = ctx.chart; if (!chartArea) return Z2_COLORS.coral;
+          const g = ctx.chart.ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+          g.addColorStop(0, Z2_COLORS.coral); g.addColorStop(1, Z2_COLORS.coralLight); return g; },
+      },
+    ] },
     options: {
       indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-      scales: { x: { grid: { color: c.grid }, ticks: { color: c.muted, callback: v => v + '%' } }, y: { grid: { display: false }, ticks: { color: c.muted, font: { size: 12 } } } },
-      plugins: { legend: { display: false }, tooltip: { backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1, callbacks: { label: (ctx) => fmtSigned(ctx.parsed.x, 2) + '%' } } },
+      scales: { x: { grid: z2GridStyle(c), ticks: { color: c.muted, callback: v => v + '%' } }, y: { grid: { display: false }, ticks: { color: c.muted, font: { size: 12 } } } },
+      plugins: { legend: { display: false }, tooltip: { enabled: false, external: z2ExternalTooltip } },
     },
   });
 }
@@ -1312,18 +1591,45 @@ function renderTrend(ym, bu, c) {
   const trailMonths = monthsTrailing(ym, 12);
   const litersArr = trailMonths.map(m => { const rs = getRows(m, bu); return sum(rs, 'cashL') + sum(rs, 'creditL'); });
   const gpArr = trailMonths.map(m => sum(getRows(m, bu), 'grossProfit'));
+  const maxLitersIdx = litersArr.indexOf(Math.max(...litersArr));
+  document.getElementById('z2BadgeLiters').textContent = `Peak: ${fmt(litersArr[maxLitersIdx])} ล. (${trailMonths[maxLitersIdx]})`;
+  document.getElementById('z2BadgeGP').textContent = `เฉลี่ย: ฿${fmt(avg(gpArr))}`;
+
   destroyChart('trendLiters');
   CHARTS.trendLiters = new Chart(document.getElementById('trendLiters'), {
     type: 'line',
-    data: { labels: trailMonths, datasets: [{ data: litersArr, borderColor: c.s1, backgroundColor: c.s1 + '22', fill: true, tension: 0.3, pointRadius: 0 }] },
-    options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } }, y: { grid: { color: c.grid }, ticks: { color: c.muted, font: { size: 11 } } } }, plugins: { legend: { display: false }, tooltip: { backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1 } } },
+    data: { labels: trailMonths, datasets: [{
+      data: litersArr, borderColor: Z2_COLORS.cyan, borderWidth: 3, tension: 0.4, pointRadius: 0, pointHoverRadius: 5,
+      pointBackgroundColor: Z2_COLORS.cyan, fill: true, z2Label: (dp) => `${fmt(dp.raw)} ลิตร`,
+      backgroundColor: (ctx) => { const { chartArea } = ctx.chart; if (!chartArea) return; return z2VGradient(ctx.chart.ctx, chartArea, color_mix_alpha(Z2_COLORS.cyan, 0.32), color_mix_alpha(Z2_COLORS.cyan, 0)); },
+    }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } }, y: { grid: z2GridStyle(c), ticks: { color: c.muted, font: { size: 11 }, callback: (v) => (v / 1000) + 'k' } } },
+      plugins: { legend: { display: false }, tooltip: { enabled: false, external: z2ExternalTooltip } },
+    },
   });
   destroyChart('trendGP');
   CHARTS.trendGP = new Chart(document.getElementById('trendGP'), {
     type: 'line',
-    data: { labels: trailMonths, datasets: [{ data: gpArr, borderColor: c.s6, backgroundColor: c.s6 + '22', fill: true, tension: 0.3, pointRadius: 0 }] },
-    options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } }, y: { grid: { color: c.grid }, ticks: { color: c.muted, font: { size: 11 } } } }, plugins: { legend: { display: false }, tooltip: { backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1 } } },
+    data: { labels: trailMonths, datasets: [{
+      data: gpArr, borderColor: Z2_COLORS.emerald, borderWidth: 3, tension: 0.4, pointRadius: 0, pointHoverRadius: 5,
+      pointBackgroundColor: Z2_COLORS.emerald, fill: true, z2Label: (dp) => `฿${fmt(dp.raw)}`,
+      backgroundColor: (ctx) => { const { chartArea } = ctx.chart; if (!chartArea) return; return z2VGradient(ctx.chart.ctx, chartArea, color_mix_alpha(Z2_COLORS.emerald, 0.30), color_mix_alpha(Z2_COLORS.emerald, 0)); },
+    }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } }, y: { grid: z2GridStyle(c), ticks: { color: c.muted, font: { size: 11 }, callback: (v) => '฿' + (v / 1000) + 'k' } } },
+      plugins: { legend: { display: false }, tooltip: { enabled: false, external: z2ExternalTooltip } },
+    },
   });
+}
+// Small helper: apply an alpha to a "#rrggbb" hex color without needing a
+// full color library — used for the Zone 2 vibrant gradients/tooltips.
+function color_mix_alpha(hex, alpha) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 // ---------------------------------------------------------------------
@@ -1413,52 +1719,9 @@ function renderRepairZone() {
   document.getElementById('repKpiTopValue').textContent = monthRows.length ? '฿' + fmt(topVehicle.total, 2) : '-';
   document.getElementById('repKpiShops').textContent = shopCount ? shopCount + ' แห่ง' : '-';
 
-  document.getElementById('repairViewTable').classList.toggle('active', STATE.repairView === 'table');
-  document.getElementById('repairViewAccordion').classList.toggle('active', STATE.repairView === 'accordion');
-  document.getElementById('repairTableWrap').style.display = STATE.repairView === 'table' ? 'block' : 'none';
-  document.getElementById('repairAccordionWrap').style.display = STATE.repairView === 'accordion' ? 'block' : 'none';
-
-  if (STATE.repairView === 'table') {
-    renderRepairTable(filtered, topVehicle.plate);
-  } else {
-    renderRepairAccordion(filtered, topVehicle.plate);
-  }
+  renderRepairAccordion(filtered, topVehicle.plate);
 
   renderRepairYtdSection(c, catDefs);
-}
-
-function renderRepairTable(rows, hotPlate) {
-  const key = STATE.repairSortKey, dir = STATE.repairSortDir === 'asc' ? 1 : -1;
-  const sorted = [...rows].sort((a, b) => {
-    const va = key === 'vehicle' ? a.vehicle : a[key];
-    const vb = key === 'vehicle' ? b.vehicle : b[key];
-    if (typeof va === 'string') return va.localeCompare(vb) * dir;
-    return (va - vb) * dir;
-  });
-  document.querySelectorAll('#repairItemsTable thead th').forEach(th => {
-    th.classList.toggle('sorted', th.getAttribute('data-key') === key);
-    const arrow = th.querySelector('.sort-arrow');
-    if (th.getAttribute('data-key') === key) arrow.textContent = dir === 1 ? '↑' : '↓'; else arrow.textContent = '↕';
-  });
-  const tbody = document.querySelector('#repairItemsTable tbody');
-  if (!sorted.length) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">ไม่พบรายการซ่อมที่ตรงกับตัวกรอง</td></tr>`;
-    return;
-  }
-  tbody.innerHTML = sorted.map(r => {
-    const isHot = r.vehicle === hotPlate;
-    return `<tr class="${isHot ? 'repair-hot' : ''}">
-      <td><span class="bu-badge">${escapeHtml(r.bu)}</span></td>
-      <td style="font-weight:700;">${escapeHtml(r.vehicle)}${isHot ? '<span class="hot-badge">ค่าซ่อมสูงสุด</span>' : ''}</td>
-      <td>${escapeHtml(r.routeId)}</td>
-      <td>
-        <div>${escapeHtml(r.item)}</div>
-        <div>${repairCatBadgeHtml(r.category)}</div>
-      </td>
-      <td>${escapeHtml(r.shop)}</td>
-      <td style="text-align:right;font-weight:700;">฿${fmt(r.cost, 2)}</td>
-    </tr>`;
-  }).join('');
 }
 
 function renderRepairAccordion(rows, hotPlate) {
