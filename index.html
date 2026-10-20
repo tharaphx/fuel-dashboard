@@ -158,123 +158,35 @@
   }
 
   /* ---------- Zone 1 ---------- */
-.kpi-grid { 
-  display: grid; 
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
-  gap: 14px; 
-}
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+  .kpi-card {
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px;
+    padding: 14px 16px;
+  }
+  .kpi-label { font-size: 16px; color: var(--text-secondary); margin-bottom: 10px; font-weight: 600; }
+  .kpi-value { font-size: 34px; font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; }
+  .kpi-value .unit { font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-left: 3px; }
+  .kpi-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .delta { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; margin-top: 6px; padding: 2px 8px; border-radius: 12px; }
+  .delta.up { color: var(--delta-good); background: color-mix(in srgb, var(--good) 14%, transparent); }
+  .delta.down { color: var(--critical); background: color-mix(in srgb, var(--critical) 14%, transparent); }
+  .delta.flat { color: var(--text-muted); background: color-mix(in srgb, var(--text-muted) 12%, transparent); }
+  .kpi-spark { height: 28px; margin-top: 8px; }
+  .kpi-donut-wrap { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+  .kpi-donut-wrap canvas { max-width: 52px; max-height: 52px; }
+  .target-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; margin-top: 6px; padding: 2px 8px; border-radius: 12px; }
 
-.kpi-card {
-  background: var(--surface-1); 
-  border: 1px solid var(--border); 
-  border-radius: 12px;
-  padding: 14px 16px; /* ปรับลด Padding ลงให้กระชับขึ้น */
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-/* หัวข้อการ์ด: ย่อขนาดลงเล็กน้อยเพื่อให้ตัวเลขหลักดูโดดเด่น */
-.kpi-label { 
-  font-size: 13px; 
-  color: var(--text-secondary); 
-  margin-bottom: 6px; 
-  font-weight: 600; 
-  line-height: 1.3;
-}
-
-/* ตัวเลขหลัก: ลดจาก 38px เหลือ 22px-24px เพื่อไม่ให้ล้นการ์ด */
-.kpi-value { 
-  font-size: 24px; 
-  font-weight: 700; 
-  line-height: 1.15; 
-  letter-spacing: -0.02em; 
-  word-break: break-word; /* ป้องกันตัวเลขยาวเกินขอบ */
-}
-
-/* สัญลักษณ์/หน่วยนับ: ปรับให้เล็กลง วางต่อท้ายตัวเลขพอดี */
-.kpi-value .unit { 
-  font-size: 12px; 
-  font-weight: 500; 
-  color: var(--text-secondary); 
-  margin-left: 3px; 
-}
-
-/* ข้อความรองใต้ตัวเลข */
-.kpi-sub { 
-  font-size: 11px; 
-  color: var(--text-muted); 
-  margin-top: 2px; 
-}
-
-/* ป้ายแสดง % การเปลี่ยนแปลง (+/-): ปรับขนาด Badge ให้เล็กลง */
-.delta { 
-  display: inline-flex; 
-  align-items: center; 
-  gap: 4px; 
-  font-size: 11px; 
-  font-weight: 600; 
-  margin-top: 6px; 
-  padding: 2px 8px; 
-  border-radius: 12px; 
-  width: fit-content;
-}
-
-.delta.up { color: var(--delta-good); background: color-mix(in srgb, var(--good) 14%, transparent); }
-.delta.down { color: var(--critical); background: color-mix(in srgb, var(--critical) 14%, transparent); }
-.delta.flat { color: var(--text-muted); background: color-mix(in srgb, var(--text-muted) 12%, transparent); }
-
-/* กราฟเส้นขนาดเล็ก (Sparkline) */
-.kpi-spark { 
-  height: 28px; /* ลดความสูงลงเล็กน้อย */
-  margin-top: 8px; 
-}
-
-/* กราฟโดนัท (Donut Chart) */
-.kpi-donut-wrap { 
-  display: flex; 
-  align-items: center; 
-  gap: 10px; 
-  margin-top: 6px; 
-}
-
-.kpi-donut-wrap canvas { 
-  max-width: 52px; /* ลดขนาด Donut ลงเพื่อให้พอดีกับการ์ด */
-  max-height: 52px; 
-}
-
-/* ป้ายเป้าหมาย */
-.target-pill { 
-  display: inline-flex; 
-  align-items: center; 
-  gap: 4px; 
-  font-size: 11px; 
-  font-weight: 600; 
-  margin-top: 6px; 
-  padding: 2px 8px; 
-  border-radius: 12px; 
-  width: fit-content;
-}
-
-/* แถบแจ้งเตือนด้านบน (Alert Bar) */
-.alert-bar {
-  display: flex; 
-  align-items: flex-start; 
-  gap: 10px;
-  background: color-mix(in srgb, var(--warning) 10%, var(--surface-1));
-  border: 1px solid color-mix(in srgb, var(--warning) 45%, var(--border));
-  border-radius: 10px; 
-  padding: 10px 14px; 
-  margin-bottom: 14px; 
-  font-size: 13px; 
-  color: var(--text-primary);
-}
-
-.alert-bar.ok { background: color-mix(in srgb, var(--good) 8%, var(--surface-1)); border-color: color-mix(in srgb, var(--good) 35%, var(--border)); }
-.alert-bar .icon { font-size: 16px; line-height: 1.3; }
-.alert-bar .lines { display: flex; flex-direction: column; gap: 2px; }
-.alert-bar .lines .tag { font-weight: 700; color: #8a6200; margin-right: 4px; }
-.alert-bar.ok .lines .tag { color: var(--good); }
+  .alert-bar {
+    display: flex; align-items: flex-start; gap: 12px;
+    background: color-mix(in srgb, var(--warning) 10%, var(--surface-1));
+    border: 1px solid color-mix(in srgb, var(--warning) 45%, var(--border));
+    border-radius: 12px; padding: 12px 18px; margin-bottom: 16px; font-size: 15.5px; color: var(--text-primary);
+  }
+  .alert-bar.ok { background: color-mix(in srgb, var(--good) 8%, var(--surface-1)); border-color: color-mix(in srgb, var(--good) 35%, var(--border)); }
+  .alert-bar .icon { font-size: 19px; line-height: 1.4; }
+  .alert-bar .lines { display: flex; flex-direction: column; gap: 4px; }
+  .alert-bar .lines .tag { font-weight: 800; color: #8a6200; margin-right: 6px; }
+  .alert-bar.ok .lines .tag { color: var(--good); }
 
   /* ---------- Zone 5 — Executive Alert Feed ---------- */
   .sev-summary { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
