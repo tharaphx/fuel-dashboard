@@ -158,32 +158,32 @@
   }
 
   /* ---------- Zone 1 ---------- */
-  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; }
   .kpi-card {
-    background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px;
-    padding: 14px 16px;
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px;
+    padding: 20px 22px;
   }
-  .kpi-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; font-weight: 600; }
-  .kpi-value { font-size: 34px; font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; }
-  .kpi-value .unit { font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-left: 3px; }
-  .kpi-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
-  .delta { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; margin-top: 10px; padding: 2px 8px; border-radius: 12px; }
+  .kpi-label { font-size: 16px; color: var(--text-secondary); margin-bottom: 10px; font-weight: 600; }
+  .kpi-value { font-size: 38px; font-weight: 800; line-height: 1.1; letter-spacing: -0.01em; }
+  .kpi-value .unit { font-size: 19px; font-weight: 600; color: var(--text-secondary); margin-left: 4px; }
+  .kpi-sub { font-size: 14.5px; color: var(--text-muted); margin-top: 4px; }
+  .delta { display: inline-flex; align-items: center; gap: 5px; font-size: 15.5px; font-weight: 700; margin-top: 10px; padding: 3px 10px; border-radius: 20px; }
   .delta.up { color: var(--delta-good); background: color-mix(in srgb, var(--good) 14%, transparent); }
   .delta.down { color: var(--critical); background: color-mix(in srgb, var(--critical) 14%, transparent); }
   .delta.flat { color: var(--text-muted); background: color-mix(in srgb, var(--text-muted) 12%, transparent); }
-  .kpi-spark { height: 28px; margin-top: 8px; }
-  .kpi-donut-wrap { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
-  .kpi-donut-wrap canvas { max-width: 52px; max-height: 52px; }
-  .target-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; margin-top: 6px; padding: 2px 8px; border-radius: 12px; }
+  .kpi-spark { height: 38px; margin-top: 12px; }
+  .kpi-donut-wrap { display: flex; align-items: center; gap: 14px; margin-top: 8px; }
+  .kpi-donut-wrap canvas { max-width: 74px; max-height: 74px; }
+  .target-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 15.5px; font-weight: 700; margin-top: 8px; padding: 3px 10px; border-radius: 20px; }
 
   .alert-bar {
     display: flex; align-items: flex-start; gap: 12px;
     background: color-mix(in srgb, var(--warning) 10%, var(--surface-1));
     border: 1px solid color-mix(in srgb, var(--warning) 45%, var(--border));
-    border-radius: 12px; padding: 12px 18px; margin-bottom: 16px; font-size: 14px; color: var(--text-primary);
+    border-radius: 12px; padding: 12px 18px; margin-bottom: 16px; font-size: 15.5px; color: var(--text-primary);
   }
   .alert-bar.ok { background: color-mix(in srgb, var(--good) 8%, var(--surface-1)); border-color: color-mix(in srgb, var(--good) 35%, var(--border)); }
-  .alert-bar .icon { font-size: 17px; line-height: 1.4; }
+  .alert-bar .icon { font-size: 19px; line-height: 1.4; }
   .alert-bar .lines { display: flex; flex-direction: column; gap: 4px; }
   .alert-bar .lines .tag { font-weight: 800; color: #8a6200; margin-right: 6px; }
   .alert-bar.ok .lines .tag { color: var(--good); }
@@ -1562,29 +1562,81 @@ function renderTrips(rowData, c) {
     },
   });
 }
+// Background reference-zone plugin for the fuel-diff chart: one shaded
+// rectangle spanning the tolerance band (±FUEL_DIFF_TOLERANCE_PCT) across the
+// full chart height, drawn behind the bars — replaces the old two-dataset
+// ("skip" bars) approach with a single flat band.
+function z2ReferenceZonePlugin(toleranceColor, tolerance) {
+  return {
+    id: 'z2ReferenceZone_' + Math.random().toString(36).slice(2),
+    beforeDatasetsDraw(chart) {
+      const { ctx, chartArea, scales } = chart;
+      if (!chartArea) return;
+      const xScale = scales.x;
+      const left = xScale.getPixelForValue(-tolerance);
+      const right = xScale.getPixelForValue(tolerance);
+      ctx.save();
+      ctx.fillStyle = toleranceColor;
+      ctx.fillRect(left, chartArea.top, right - left, chartArea.bottom - chartArea.top);
+      ctx.restore();
+    },
+  };
+}
+// Value-label plugin for the fuel-diff chart: the real % figure anchored to
+// the open end of each bar (right of a positive bar, left of a negative
+// one), with a small ⚠️ marker on any route outside tolerance.
+function z2FuelDiffLabelsPlugin(data, tolerance, criticalColor, inRangeColor) {
+  return {
+    id: 'z2FuelDiffLabels_' + Math.random().toString(36).slice(2),
+    afterDatasetsDraw(chart) {
+      const { ctx, chartArea } = chart;
+      if (!chartArea) return;
+      const meta = chart.getDatasetMeta(0);
+      ctx.save();
+      ctx.font = '700 11.5px -apple-system, "Segoe UI", sans-serif';
+      ctx.textBaseline = 'middle';
+      meta.data.forEach((bar, i) => {
+        const val = data[i];
+        const isNeg = val < 0;
+        const label = (val >= 0 ? '+' : '') + val.toFixed(2) + '%' + (val <= -tolerance ? '  ⚠️' : '');
+        ctx.fillStyle = val <= -tolerance ? criticalColor : (val < 0 ? inRangeColor : '#0b0b0b');
+        ctx.textAlign = isNeg ? 'right' : 'left';
+        ctx.fillText(label, bar.x + (isNeg ? -8 : 8), bar.y);
+      });
+      ctx.restore();
+    },
+  };
+}
 function renderFuelDiffBig(rowData, c) {
   destroyChart('fuelDiffBig');
   const sorted = [...rowData].sort((a, b) => a.fuelDiffPct - b.fuelDiffPct);
   if (sorted.length) document.getElementById('z2BadgeFuelDiff').textContent = `แย่สุด: ${fmtSigned(sorted[0].fuelDiffPct, 1)}%`;
   const labels = sorted.map(r => r.routeId);
   const data = sorted.map(r => r.fuelDiffPct);
-  const safeBand = labels.map(() => FUEL_DIFF_TOLERANCE_PCT);
+  const tol = FUEL_DIFF_TOLERANCE_PCT;
+  // Semantic color by severity: outside tolerance (<= -tol) = coral red,
+  // negative but within tolerance = translucent cyan, over (> 0%) = emerald.
+  const barColor = (v) => v <= -tol ? Z2_COLORS.coral : (v < 0 ? Z2_COLORS.cyan : Z2_COLORS.emerald);
+  const barAlpha = (v) => v <= -tol ? 1 : (v < 0 ? 0.55 : 0.9);
   CHARTS.fuelDiffBig = new Chart(document.getElementById('fuelDiffBig'), {
     type: 'bar',
-    data: { labels, datasets: [
-      { label: 'เกณฑ์ปกติ', data: safeBand, backgroundColor: color_mix_alpha(c.good, 0.12), borderWidth: 0, barPercentage: 1, categoryPercentage: 1, order: 2, z2Skip: true },
-      { label: 'เกณฑ์ปกติ (ขาด)', data: safeBand.map(v => -v), backgroundColor: color_mix_alpha(c.good, 0.12), borderWidth: 0, barPercentage: 1, categoryPercentage: 1, order: 2, z2Skip: true },
-      { label: 'น้ำมันขาด/เกิน', data, borderRadius: 6, order: 1, z2Label: (dp) => `${fmtSigned(dp.raw, 2)}%`,
-        backgroundColor: (ctx) => { const { chartArea } = ctx.chart; if (!chartArea) return Z2_COLORS.coral;
-          const g = ctx.chart.ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-          g.addColorStop(0, Z2_COLORS.coral); g.addColorStop(1, Z2_COLORS.coralLight); return g; },
-      },
-    ] },
+    data: { labels, datasets: [{
+      data, borderRadius: 6, barPercentage: 0.62, categoryPercentage: 0.82,
+      backgroundColor: data.map(v => color_mix_alpha(barColor(v), barAlpha(v))),
+      z2Label: (dp) => `${fmtSigned(dp.raw, 2)}%`,
+    }] },
     options: {
       indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-      scales: { x: { grid: z2GridStyle(c), ticks: { color: c.muted, callback: v => v + '%' } }, y: { grid: { display: false }, ticks: { color: c.muted, font: { size: 12 } } } },
+      scales: {
+        x: { min: -1.0, max: 0.6, grid: z2GridStyle(c), ticks: { color: c.muted, callback: v => (v > 0 ? '+' : '') + v + '%' } },
+        y: { grid: { display: false }, ticks: { color: c.textSecondary, font: { size: 12, weight: '600' } } },
+      },
       plugins: { legend: { display: false }, tooltip: { enabled: false, external: z2ExternalTooltip } },
     },
+    plugins: [
+      z2ReferenceZonePlugin(color_mix_alpha(Z2_COLORS.emerald, 0.10), tol),
+      z2FuelDiffLabelsPlugin(data, tol, Z2_COLORS.coral, c.textSecondary),
+    ],
   });
 }
 // Y-axis range for the Zone 2 trend charts: pads the data's own min/max by
