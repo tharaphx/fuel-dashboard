@@ -158,23 +158,23 @@
   }
 
   /* ---------- Zone 1 ---------- */
-  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
   .kpi-card {
-    background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px;
-    padding: 20px 22px;
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 16px;
   }
-  .kpi-label { font-size: 14.5px; color: var(--text-secondary); margin-bottom: 10px; font-weight: 600; }
-  .kpi-value { font-size: 34px; font-weight: 800; line-height: 1.1; letter-spacing: -0.01em; }
-  .kpi-value .unit { font-size: 17px; font-weight: 600; color: var(--text-secondary); margin-left: 4px; }
-  .kpi-sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
-  .delta { display: inline-flex; align-items: center; gap: 5px; font-size: 14px; font-weight: 700; margin-top: 10px; padding: 3px 10px; border-radius: 20px; }
+  .kpi-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; font-weight: 600; }
+  .kpi-value { font-size: 34px; font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; }
+  .kpi-value .unit { font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-left: 3px; }
+  .kpi-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .delta { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; margin-top: 10px; padding: 2px 8px; border-radius: 12px; }
   .delta.up { color: var(--delta-good); background: color-mix(in srgb, var(--good) 14%, transparent); }
   .delta.down { color: var(--critical); background: color-mix(in srgb, var(--critical) 14%, transparent); }
   .delta.flat { color: var(--text-muted); background: color-mix(in srgb, var(--text-muted) 12%, transparent); }
-  .kpi-spark { height: 38px; margin-top: 12px; }
-  .kpi-donut-wrap { display: flex; align-items: center; gap: 14px; margin-top: 8px; }
-  .kpi-donut-wrap canvas { max-width: 74px; max-height: 74px; }
-  .target-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 14px; font-weight: 700; margin-top: 8px; padding: 3px 10px; border-radius: 20px; }
+  .kpi-spark { height: 28px; margin-top: 8px; }
+  .kpi-donut-wrap { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+  .kpi-donut-wrap canvas { max-width: 52px; max-height: 52px; }
+  .target-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; margin-top: 6px; padding: 2px 8px; border-radius: 12px; }
 
   .alert-bar {
     display: flex; align-items: flex-start; gap: 12px;
