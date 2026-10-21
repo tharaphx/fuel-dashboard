@@ -1634,7 +1634,7 @@ function z2AnomalyBandPlugin(anomalyIdx, color) {
   };
 }
 // Draws the abbreviated value above every point on a Zone 2 trend line
-// (e.g. "0.14M" / "฿0.39M") so monthly figures are readable without hovering.
+// (e.g. "142k" / "฿398k") so monthly figures are readable without hovering.
 function z2ValueLabelsPlugin(labelFn, color) {
   return {
     id: 'z2ValueLabels_' + Math.random().toString(36).slice(2),
@@ -1655,7 +1655,7 @@ function z2ValueLabelsPlugin(labelFn, color) {
 }
 // Abbreviated "Nk" formatting shared by the trend charts' axis ticks and
 // their on-point value labels, so both read consistently (e.g. "139.8k").
-function z2FmtK(v, prefix = '') { return prefix + (Math.round(v / 100) / 10) + 'k'; }
+function z2FmtK(v, prefix = '') { return prefix + (Math.round(v / 10000) / 100) + 'M'; }
 function renderTrend(ym, bu, c) {
   const trailMonths = monthsTrailing(ym, 12);
   const litersArr = trailMonths.map(m => { const rs = getRows(m, bu); return sum(rs, 'cashL') + sum(rs, 'creditL'); });
