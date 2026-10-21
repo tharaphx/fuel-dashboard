@@ -1634,7 +1634,7 @@ function z2AnomalyBandPlugin(anomalyIdx, color) {
   };
 }
 // Draws the abbreviated value above every point on a Zone 2 trend line
-// (e.g. "142k" / "฿398k") so monthly figures are readable without hovering.
+// (e.g. "0.14M" / "฿0.39M") so monthly figures are readable without hovering.
 function z2ValueLabelsPlugin(labelFn, color) {
   return {
     id: 'z2ValueLabels_' + Math.random().toString(36).slice(2),
