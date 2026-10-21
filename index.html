@@ -157,7 +157,7 @@
     background: var(--series-1); padding: 3px 9px; border-radius: 6px;
   }
 
-  /* ---------- Zone 1 ---------- */
+   /* ---------- Zone 1 ---------- */
 .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
   .kpi-card {
     background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px;
@@ -1587,6 +1587,52 @@ function renderFuelDiffBig(rowData, c) {
     },
   });
 }
+// Y-axis range for the Zone 2 trend charts: pads the data's own min/max by
+// 15% on each side instead of forcing the axis to start at 0, so real
+// month-to-month variation reads clearly without looking flattened or
+// exaggerated. Clamped at 0 since liters/GP totals here don't go negative.
+function z2PaddedScale(arr) {
+  const min = Math.min(...arr), max = Math.max(...arr);
+  const range = (max - min) || (max * 0.1) || 1;
+  return { min: Math.max(0, Math.floor(min - range * 0.15)), max: Math.ceil(max + range * 0.15) };
+}
+// Marker styling: show a solid dot only at the peak month and a ring-outlined
+// dot at the latest month — every other month stays markerless to cut clutter.
+function z2MarkerRadius(arr) {
+  const peakIdx = arr.indexOf(Math.max(...arr));
+  const lastIdx = arr.length - 1;
+  return (ctx) => (ctx.dataIndex === peakIdx || ctx.dataIndex === lastIdx) ? 5 : 0;
+}
+function z2MarkerStyle(arr, color) {
+  const peakIdx = arr.indexOf(Math.max(...arr));
+  const lastIdx = arr.length - 1;
+  return {
+    pointBackgroundColor: (ctx) => ctx.dataIndex === peakIdx ? color : '#fff',
+    pointBorderColor: color,
+    pointBorderWidth: (ctx) => ctx.dataIndex === lastIdx ? 3 : 2,
+  };
+}
+// Soft vertical background band behind any month flagged as a YoY anomaly —
+// same rule Zone 5 uses for "ยอดขายหดตัวจากปีก่อน" (pct <= -15%), just applied
+// to the fleet-wide monthly total shown in this chart instead of per-route.
+function z2AnomalyBandPlugin(anomalyIdx, color) {
+  return {
+    id: 'z2AnomalyBand_' + Math.random().toString(36).slice(2),
+    beforeDatasetsDraw(chart) {
+      const { ctx, chartArea, scales } = chart;
+      if (!chartArea || !anomalyIdx.length) return;
+      const xScale = scales.x;
+      const bandHalfWidth = (xScale.getPixelForValue(1) - xScale.getPixelForValue(0)) / 2 * 0.82;
+      ctx.save();
+      ctx.fillStyle = color;
+      anomalyIdx.forEach(i => {
+        const centerX = xScale.getPixelForValue(i);
+        ctx.fillRect(centerX - bandHalfWidth, chartArea.top, bandHalfWidth * 2, chartArea.bottom - chartArea.top);
+      });
+      ctx.restore();
+    },
+  };
+}
 function renderTrend(ym, bu, c) {
   const trailMonths = monthsTrailing(ym, 12);
   const litersArr = trailMonths.map(m => { const rs = getRows(m, bu); return sum(rs, 'cashL') + sum(rs, 'creditL'); });
@@ -1595,33 +1641,58 @@ function renderTrend(ym, bu, c) {
   document.getElementById('z2BadgeLiters').textContent = `Peak: ${fmt(litersArr[maxLitersIdx])} ล. (${trailMonths[maxLitersIdx]})`;
   document.getElementById('z2BadgeGP').textContent = `เฉลี่ย: ฿${fmt(avg(gpArr))}`;
 
+  // YoY anomaly detection — same threshold as Zone 5's "ยอดขายหดตัวจากปีก่อน"
+  // rule (pct <= -15%), computed per trailing month against the same month
+  // one year earlier.
+  const litersYoyPct = trailMonths.map(m => {
+    const prevYearRows = getRows(prevYearYM(m), bu);
+    const prevYearLiters = sum(prevYearRows, 'cashL') + sum(prevYearRows, 'creditL');
+    return pct(sum(getRows(m, bu), 'cashL') + sum(getRows(m, bu), 'creditL'), prevYearLiters);
+  });
+  const gpYoyPct = trailMonths.map(m => pct(sum(getRows(m, bu), 'grossProfit'), sum(getRows(prevYearYM(m), bu), 'grossProfit')));
+  const litersAnomalyIdx = litersYoyPct.map((p, i) => p !== null && p <= -15 ? i : -1).filter(i => i >= 0);
+  const gpAnomalyIdx = gpYoyPct.map((p, i) => p !== null && p <= -15 ? i : -1).filter(i => i >= 0);
+
+  const litersScale = z2PaddedScale(litersArr);
+  const gpScale = z2PaddedScale(gpArr);
+
   destroyChart('trendLiters');
   CHARTS.trendLiters = new Chart(document.getElementById('trendLiters'), {
     type: 'line',
     data: { labels: trailMonths, datasets: [{
-      data: litersArr, borderColor: Z2_COLORS.cyan, borderWidth: 3, tension: 0.4, pointRadius: 0, pointHoverRadius: 5,
-      pointBackgroundColor: Z2_COLORS.cyan, fill: true, z2Label: (dp) => `${fmt(dp.raw)} ลิตร`,
+      data: litersArr, borderColor: Z2_COLORS.cyan, borderWidth: 3, tension: 0.4,
+      pointRadius: z2MarkerRadius(litersArr), pointHoverRadius: 6, ...z2MarkerStyle(litersArr, Z2_COLORS.cyan),
+      fill: true, z2Label: (dp) => `${fmt(dp.raw)} ลิตร`,
       backgroundColor: (ctx) => { const { chartArea } = ctx.chart; if (!chartArea) return; return z2VGradient(ctx.chart.ctx, chartArea, color_mix_alpha(Z2_COLORS.cyan, 0.32), color_mix_alpha(Z2_COLORS.cyan, 0)); },
     }] },
     options: {
       responsive: true, maintainAspectRatio: false,
-      scales: { x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } }, y: { grid: z2GridStyle(c), ticks: { color: c.muted, font: { size: 11 }, callback: (v) => (v / 1000) + 'k' } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } },
+        y: { min: litersScale.min, max: litersScale.max, grid: z2GridStyle(c), ticks: { color: c.muted, font: { size: 11 }, callback: (v) => (v / 1000) + 'k' } },
+      },
       plugins: { legend: { display: false }, tooltip: { enabled: false, external: z2ExternalTooltip } },
     },
+    plugins: [z2AnomalyBandPlugin(litersAnomalyIdx, color_mix_alpha(Z2_COLORS.coral, 0.12))],
   });
   destroyChart('trendGP');
   CHARTS.trendGP = new Chart(document.getElementById('trendGP'), {
     type: 'line',
     data: { labels: trailMonths, datasets: [{
-      data: gpArr, borderColor: Z2_COLORS.emerald, borderWidth: 3, tension: 0.4, pointRadius: 0, pointHoverRadius: 5,
-      pointBackgroundColor: Z2_COLORS.emerald, fill: true, z2Label: (dp) => `฿${fmt(dp.raw)}`,
+      data: gpArr, borderColor: Z2_COLORS.emerald, borderWidth: 3, tension: 0.4,
+      pointRadius: z2MarkerRadius(gpArr), pointHoverRadius: 6, ...z2MarkerStyle(gpArr, Z2_COLORS.emerald),
+      fill: true, z2Label: (dp) => `฿${fmt(dp.raw)}`,
       backgroundColor: (ctx) => { const { chartArea } = ctx.chart; if (!chartArea) return; return z2VGradient(ctx.chart.ctx, chartArea, color_mix_alpha(Z2_COLORS.emerald, 0.30), color_mix_alpha(Z2_COLORS.emerald, 0)); },
     }] },
     options: {
       responsive: true, maintainAspectRatio: false,
-      scales: { x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } }, y: { grid: z2GridStyle(c), ticks: { color: c.muted, font: { size: 11 }, callback: (v) => '฿' + (v / 1000) + 'k' } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } },
+        y: { min: gpScale.min, max: gpScale.max, grid: z2GridStyle(c), ticks: { color: c.muted, font: { size: 11 }, callback: (v) => '฿' + (v / 1000) + 'k' } },
+      },
       plugins: { legend: { display: false }, tooltip: { enabled: false, external: z2ExternalTooltip } },
     },
+    plugins: [z2AnomalyBandPlugin(gpAnomalyIdx, color_mix_alpha(Z2_COLORS.coral, 0.12))],
   });
 }
 // Small helper: apply an alpha to a "#rrggbb" hex color without needing a
