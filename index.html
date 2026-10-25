@@ -345,24 +345,11 @@
     background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border);
     border-radius: 9px; padding: 9px 13px; font-size: 16px;
   }
-  .view-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 9px; padding: 3px; background: var(--surface-1); }
-  .view-toggle button {
-    border: none; background: transparent; color: var(--text-secondary); font-size: 15px; font-weight: 700;
-    padding: 7px 14px; border-radius: 7px; cursor: pointer;
-  }
-  .view-toggle button.active { background: var(--series-1); color: #fff; }
-
   .repair-tag { display:inline-flex; align-items:center; font-size: 13px; font-weight: 700; padding: 2px 9px; border-radius: 20px; margin: 2px 4px 0 0; }
 
   .repair-ytd-section { margin-bottom: 22px; }
   .repair-ytd-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
   .repair-ytd-head h3 { font-size: 17px; font-weight: 700; margin: 0; }
-  .ytd-chart-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
-  .ytd-chart-toolbar select {
-    background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border);
-    border-radius: 9px; padding: 7px 12px; font-size: 14.5px; min-width: 200px;
-  }
-  .ytd-chart-toolbar select.hidden { display: none; }
   .repair-donut-row { display: flex; align-items: center; gap: 18px; }
   .repair-donut-wrap { position: relative; width: 150px; height: 150px; flex-shrink: 0; }
   .repair-donut-center {
@@ -432,7 +419,6 @@
 <div class="filter-bar">
   <div><label for="ymSelect">เดือน-ปี</label><select id="ymSelect"></select></div>
   <div><label for="buSelect">หน่วยธุรกิจ (BU)</label><select id="buSelect"></select></div>
-  <div><label for="searchInput">ค้นหา Route ID / รถ</label><input id="searchInput" placeholder="เช่น CH69, M60"></div>
   <div id="statusMsgBar" style="font-size:15px;color:var(--text-muted);"></div>
 </div>
 
@@ -444,7 +430,6 @@
   <div><label for="repairVehicleFilter">รถ (ทะเบียน)</label><select id="repairVehicleFilter"><option value="ALL">ทุกคัน</option></select></div>
   <div><label for="repairTagFilter">ประเภทงาน</label><select id="repairTagFilter"><option value="ALL">ทุกประเภทงาน</option></select></div>
   <div><label for="repairShopFilter">ศูนย์ซ่อม</label><select id="repairShopFilter"><option value="ALL">ทุกศูนย์ซ่อม</option></select></div>
-  <div><label for="repairSearchInput">ค้นหา</label><input id="repairSearchInput" placeholder="ทะเบียนรถ / รายการซ่อม / Route ID" style="min-width:220px;"></div>
 </div>
 
 <div id="app" style="display:none;">
@@ -599,15 +584,8 @@
 
       <div class="focus-grid" style="grid-template-columns: 1.3fr 1fr;">
         <div class="chart-card">
-          <h3 id="repairYtdChartTitle">ค่าซ่อมประจำเดือนแยกตามคันรถ (Monthly Maintenance Cost by Vehicle)</h3>
-          <div class="desc" id="repairYtdChartDesc">แสดงยอดค่าซ่อมในแต่ละเดือน (ม.ค. - ธ.ค.) แบ่งเฉพาะ Top 3 รถที่ค่าซ่อมสูงสุดของเดือนนั้น ส่วนที่เหลือรวมเป็น "อื่นๆ"</div>
-          <div class="ytd-chart-toolbar">
-            <div class="view-toggle">
-              <button id="repairYtdModeTop3" class="active">แสดง Top 3 + อื่นๆ</button>
-              <button id="repairYtdModeSingle">แสดงเจาะจงรายคัน</button>
-            </div>
-            <select id="repairYtdVehicleSelect" class="hidden"></select>
-          </div>
+          <h3 id="repairYtdChartTitle">ค่าซ่อมประจำเดือน (ทั้งกองรถ)</h3>
+          <div class="desc" id="repairYtdChartDesc">แสดงยอดรวมค่าซ่อมแต่ละเดือน ตั้งแต่ ม.ค. ถึงเดือนที่เลือกไว้ในตัวกรอง — ตามเงื่อนไข BU/รถ/ประเภทงาน/ศูนย์ซ่อมที่กรองอยู่</div>
           <div class="chart-wrap"><canvas id="repairYtdChart"></canvas></div>
         </div>
         <div class="chart-card">
@@ -769,7 +747,7 @@ let RAW = [];
 let RAW_REPAIR = [];
 let TARGET_CASH_BY_BU = {};
 let FUEL_DIFF_TOLERANCE_PCT = 0.5;
-let STATE = { ym: null, bu: 'ALL', search: '', sortKey: 'liters', sortDir: 'desc', repairSearch: '', repairTag: 'ALL', repairShop: 'ALL', repairVehicle: 'ALL', repairYtdMode: 'TOP3', repairYtdVehicle: '', excSeverity: 'ALL', excRule: 'ALL' };
+let STATE = { ym: null, bu: 'ALL', sortKey: 'liters', sortDir: 'desc', repairTag: 'ALL', repairShop: 'ALL', repairVehicle: 'ALL', excSeverity: 'ALL', excRule: 'ALL' };
 let CHARTS = {};
 let LAST_ROWDATA = [];
 
@@ -952,10 +930,8 @@ function initFilters() {
   if (FILTERS_BOUND) return;
   FILTERS_BOUND = true;
 
-  const searchInput = document.getElementById('searchInput');
   ymSelect.addEventListener('change', () => { STATE.ym = ymSelect.value; renderAll(); });
   buSelect.addEventListener('change', () => { STATE.bu = buSelect.value; renderAll(); });
-  searchInput.addEventListener('input', () => { STATE.search = searchInput.value.trim().toLowerCase(); renderTable(LAST_ROWDATA); });
 
   document.querySelectorAll('#unifiedTable thead th').forEach(th => {
     th.addEventListener('click', () => {
@@ -994,28 +970,7 @@ function initFilters() {
     renderAlertTable();
   });
 
-  const repairSearchInput = document.getElementById('repairSearchInput');
-  repairSearchInput.addEventListener('input', () => { STATE.repairSearch = repairSearchInput.value.trim().toLowerCase(); renderRepairZone(); });
   document.getElementById('repairTagFilter').addEventListener('change', (e) => { STATE.repairTag = e.target.value; renderRepairZone(); });
-  document.getElementById('repairYtdVehicleSelect').addEventListener('change', (e) => { STATE.repairYtdVehicle = e.target.value; renderRepairZone(); });
-  document.getElementById('repairYtdModeTop3').addEventListener('click', () => {
-    if (STATE.repairYtdMode === 'TOP3') return;
-    STATE.repairYtdMode = 'TOP3';
-    document.getElementById('repairYtdModeTop3').classList.add('active');
-    document.getElementById('repairYtdModeSingle').classList.remove('active');
-    document.getElementById('repairYtdVehicleSelect').classList.add('hidden');
-    document.getElementById('repairYtdChartDesc').textContent = 'แสดงยอดค่าซ่อมในแต่ละเดือน (ม.ค. - ธ.ค.) แบ่งเฉพาะ Top 3 รถที่ค่าซ่อมสูงสุดของเดือนนั้น ส่วนที่เหลือรวมเป็น "อื่นๆ"';
-    renderRepairZone();
-  });
-  document.getElementById('repairYtdModeSingle').addEventListener('click', () => {
-    if (STATE.repairYtdMode === 'SINGLE') return;
-    STATE.repairYtdMode = 'SINGLE';
-    document.getElementById('repairYtdModeSingle').classList.add('active');
-    document.getElementById('repairYtdModeTop3').classList.remove('active');
-    document.getElementById('repairYtdVehicleSelect').classList.remove('hidden');
-    document.getElementById('repairYtdChartDesc').textContent = 'แสดงค่าซ่อมของรถคันที่เลือก แยกสีตามประเภทงานซ่อมในแต่ละเดือน';
-    renderRepairZone();
-  });
   document.getElementById('repairShopFilter').addEventListener('change', (e) => { STATE.repairShop = e.target.value; renderRepairZone(); });
   document.getElementById('repairVehicleFilter').addEventListener('change', (e) => { STATE.repairVehicle = e.target.value; renderRepairZone(); });
 }
@@ -1451,8 +1406,7 @@ function cashCreditCellHtml(cashPct, creditPct, targetCashPct, cashPctGap, c) {
 
 function renderTable(rowData) {
   const c = COLORS();
-  let rows = rowData.filter(r => !STATE.search ||
-    r.routeId.toLowerCase().includes(STATE.search) || r.vehicle.toLowerCase().includes(STATE.search));
+  let rows = rowData.slice();
 
   const key = STATE.sortKey, dir = STATE.sortDir === 'asc' ? 1 : -1;
   const sortVal = (r) => {
@@ -1860,29 +1814,27 @@ function renderRepairZone() {
     shopSelect.value = STATE.repairShop; shopSelect.dataset.count = allShops.length;
   }
 
-  const q = STATE.repairSearch;
+  // Dropdown-filtered subset (รถ/ประเภทงาน/ศูนย์ซ่อม) — this now drives the
+  // KPI cards reflect รถ/ประเภทงาน/ศูนย์ซ่อม too (not just เดือน-ปี/BU).
   const filtered = monthRows.filter(r => {
     if (STATE.repairVehicle !== 'ALL' && r.vehicle !== STATE.repairVehicle) return false;
     if (STATE.repairTag !== 'ALL' && r.category.name !== STATE.repairTag) return false;
     if (STATE.repairShop !== 'ALL' && r.shop !== STATE.repairShop) return false;
-    if (q && !(r.vehicle.toLowerCase().includes(q) || r.item.toLowerCase().includes(q) || r.routeId.toLowerCase().includes(q) || r.bu.toLowerCase().includes(q))) return false;
     return true;
   });
 
-  // KPI cards (computed from the full month, not the filtered subset, so the
-  // headline numbers stay stable while the user explores with search/filter).
-  const totalCost = sum(monthRows, 'cost');
+  const totalCost = sum(filtered, 'cost');
   const vehicleTotals = {};
-  monthRows.forEach(r => { vehicleTotals[r.vehicle] = (vehicleTotals[r.vehicle] || 0) + r.cost; });
+  filtered.forEach(r => { vehicleTotals[r.vehicle] = (vehicleTotals[r.vehicle] || 0) + r.cost; });
   const vehicleCount = Object.keys(vehicleTotals).length;
-  const shopCount = new Set(monthRows.map(r => r.shop)).size;
+  const shopCount = new Set(filtered.map(r => r.shop)).size;
   let topVehicle = { plate: '-', total: 0 };
   Object.entries(vehicleTotals).forEach(([p, t]) => { if (t > topVehicle.total) topVehicle = { plate: p, total: t }; });
 
-  document.getElementById('repKpiTotal').textContent = monthRows.length ? '฿' + fmt(totalCost, 2) : '-';
+  document.getElementById('repKpiTotal').textContent = filtered.length ? '฿' + fmt(totalCost, 2) : '-';
   document.getElementById('repKpiVehicles').textContent = vehicleCount ? vehicleCount + ' คัน' : '-';
-  document.getElementById('repKpiTopLabel').textContent = monthRows.length ? `ยอดสูงสุด — ${topVehicle.plate}` : 'ยอดสูงสุด';
-  document.getElementById('repKpiTopValue').textContent = monthRows.length ? '฿' + fmt(topVehicle.total, 2) : '-';
+  document.getElementById('repKpiTopLabel').textContent = filtered.length ? `ยอดสูงสุด — ${topVehicle.plate}` : 'ยอดสูงสุด';
+  document.getElementById('repKpiTopValue').textContent = filtered.length ? '฿' + fmt(topVehicle.total, 2) : '-';
   document.getElementById('repKpiShops').textContent = shopCount ? shopCount + ' แห่ง' : '-';
 
   renderRepairAccordion(filtered, topVehicle.plate);
@@ -1952,35 +1904,36 @@ const YTD_MONTH_LABELS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 
 
 function renderRepairYtdSection(c, catDefs) {
   const year = (STATE.ym || '').split('-')[0];
+  const selectedMonthIdx = parseInt((STATE.ym || '').split('-')[1], 10) - 1; // 0-based, e.g. May -> 4
   const bu = STATE.bu;
-  const yearRows = RAW_REPAIR.filter(r => r.ym.startsWith(year + '-') && (bu === 'ALL' || r.bu === bu));
-  const vehicles = [...new Set(yearRows.map(r => r.vehicle))].sort();
 
-  // Populate the single-vehicle picker (used only in SINGLE mode) once per option-set change.
-  const vehSelect = document.getElementById('repairYtdVehicleSelect');
-  if (vehSelect.dataset.count != vehicles.length) {
-    vehSelect.innerHTML = vehicles.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
-    if (!vehicles.includes(STATE.repairYtdVehicle)) STATE.repairYtdVehicle = vehicles[0] || '';
-    vehSelect.value = STATE.repairYtdVehicle;
-    vehSelect.dataset.count = vehicles.length;
-  }
+  // Fully filter-reactive: เดือน-ปี (via the Jan..selected-month truncation
+  // below), หน่วยธุรกิจ, รถ, ประเภทงาน, ศูนย์ซ่อม all apply here, so this
+  // whole YTD block (KPIs, chart, donut) shows exactly what's selected —
+  // not a separate "always whole fleet" view like before.
+  const yearRowsAll = RAW_REPAIR.filter(r => r.ym.startsWith(year + '-') && (bu === 'ALL' || r.bu === bu))
+    .map(r => ({ ...r, category: resolveRepairCategory(r.categoryRaw, catDefs) }));
+  const yearRows = yearRowsAll.filter(r => {
+    const mIdx = parseInt((r.ym.split('-')[1] || '0'), 10) - 1;
+    if (mIdx < 0 || mIdx > selectedMonthIdx) return false; // ม.ค. ถึงเดือนที่เลือกเท่านั้น
+    if (STATE.repairVehicle !== 'ALL' && r.vehicle !== STATE.repairVehicle) return false;
+    if (STATE.repairTag !== 'ALL' && r.category.name !== STATE.repairTag) return false;
+    if (STATE.repairShop !== 'ALL' && r.shop !== STATE.repairShop) return false;
+    return true;
+  });
+  const monthLabels = YTD_MONTH_LABELS.slice(0, Math.max(0, selectedMonthIdx + 1));
 
-  const mode = STATE.repairYtdMode || 'TOP3';
-  const singleVehicle = STATE.repairYtdVehicle;
-
-  // KPI cards always answer for the whole (BU-filtered) fleet for the year,
-  // regardless of chart mode or which single vehicle is selected in SINGLE mode.
-  const monthlyFleet = new Array(12).fill(0);
+  const monthlyTotals = new Array(monthLabels.length).fill(0);
   yearRows.forEach(r => {
     const mIdx = parseInt((r.ym.split('-')[1] || '0'), 10) - 1;
-    if (mIdx >= 0 && mIdx < 12) monthlyFleet[mIdx] += r.cost;
+    if (mIdx >= 0 && mIdx < monthlyTotals.length) monthlyTotals[mIdx] += r.cost;
   });
-  const ytdTotal = monthlyFleet.reduce((a, b) => a + b, 0);
-  const maxMonthVal = Math.max(...monthlyFleet);
-  const maxMonthIdx = monthlyFleet.indexOf(maxMonthVal);
+  const ytdTotal = monthlyTotals.reduce((a, b) => a + b, 0);
+  const maxMonthVal = monthlyTotals.length ? Math.max(...monthlyTotals) : 0;
+  const maxMonthIdx = monthlyTotals.indexOf(maxMonthVal);
   document.getElementById('ytdKpiTotal').textContent = yearRows.length ? '฿' + fmt(ytdTotal, 2) : '-';
   document.getElementById('ytdKpiTopMonth').textContent = yearRows.length && maxMonthVal > 0
-    ? `${YTD_MONTH_LABELS[maxMonthIdx]} (฿${fmt(maxMonthVal, 2)})` : '-';
+    ? `${monthLabels[maxMonthIdx]} (฿${fmt(maxMonthVal, 2)})` : '-';
   const vehicleYearTotals = {};
   yearRows.forEach(r => { vehicleYearTotals[r.vehicle] = (vehicleYearTotals[r.vehicle] || 0) + r.cost; });
   let topVehicleOfYear = { vehicle: '-', total: 0 };
@@ -1988,131 +1941,40 @@ function renderRepairYtdSection(c, catDefs) {
   document.getElementById('ytdKpiTopVehicle').textContent = topVehicleOfYear.total > 0
     ? `${topVehicleOfYear.vehicle} (฿${fmt(topVehicleOfYear.total, 2)})` : '-';
 
-  let viewRows, view;
-  if (mode === 'SINGLE' && singleVehicle) {
-    view = singleVehicle;
-    viewRows = yearRows.filter(r => r.vehicle === singleVehicle);
-    renderRepairYtdSingleChart(c, catDefs, viewRows, singleVehicle);
-  } else {
-    view = 'FLEET';
-    viewRows = yearRows;
-    renderRepairYtdTop3Chart(c, yearRows, vehicles);
-  }
-
-  renderRepairDonut(c, catDefs, view, viewRows);
+  const isSingleVehicle = STATE.repairVehicle !== 'ALL';
+  renderRepairYtdChart(c, monthLabels, monthlyTotals, isSingleVehicle ? STATE.repairVehicle : null);
+  renderRepairDonut(c, catDefs, isSingleVehicle ? STATE.repairVehicle : 'FLEET', yearRows);
 }
 
-// TOP3 mode — each month's bar shows only that month's Top 3 highest-cost
-// vehicles (recomputed independently every month, not a fixed yearly Top 3),
-// with every other vehicle that month rolled into one "อื่นๆ" segment.
-function renderRepairYtdTop3Chart(c, yearRows, vehicles) {
-  document.getElementById('repairYtdChartTitle').textContent = 'ค่าซ่อมประจำเดือนแยกตามคันรถ (Monthly Maintenance Cost by Vehicle)';
-
-  const monthlyByVehicle = {};
-  vehicles.forEach(v => { monthlyByVehicle[v] = new Array(12).fill(0); });
-  yearRows.forEach(r => {
-    const mIdx = parseInt((r.ym.split('-')[1] || '0'), 10) - 1;
-    if (mIdx >= 0 && mIdx < 12 && monthlyByVehicle[r.vehicle]) monthlyByVehicle[r.vehicle][mIdx] += r.cost;
-  });
-  // Vehicles ranked descending by cost, independently for each of the 12 months.
-  const rankings = YTD_MONTH_LABELS.map((_, m) => vehicles
-    .map(v => ({ vehicle: v, cost: monthlyByVehicle[v][m] }))
-    .sort((a, b) => b.cost - a.cost));
-
-  const rank1 = rankings.map(r => r[0] ? r[0].cost : 0);
-  const rank2 = rankings.map(r => r[1] ? r[1].cost : 0);
-  const rank3 = rankings.map(r => r[2] ? r[2].cost : 0);
-  const others = rankings.map(r => r.slice(3).reduce((a, x) => a + x.cost, 0));
-
-  const RANK_COLORS = [c.s1, c.s3, c.s5];
-  const datasets = [
-    { label: 'อันดับ 1 (สูงสุด)', data: rank1, backgroundColor: RANK_COLORS[0], borderRadius: 3, maxBarThickness: 34 },
-    { label: 'อันดับ 2', data: rank2, backgroundColor: RANK_COLORS[1], borderRadius: 3, maxBarThickness: 34 },
-    { label: 'อันดับ 3', data: rank3, backgroundColor: RANK_COLORS[2], borderRadius: 3, maxBarThickness: 34 },
-    { label: 'อื่นๆ', data: others, backgroundColor: c.grid, borderRadius: 3, maxBarThickness: 34 },
-  ];
+// Single unified monthly bar chart — one plain (non-stacked) bar per month,
+// Jan through the selected month. No more Top3/"อื่นๆ" split: the รถ filter
+// upstream already narrows this to one vehicle when the user picks one, so
+// the chart just shows whatever total that filtered selection adds up to
+// each month.
+function renderRepairYtdChart(c, monthLabels, monthlyTotals, vehicle) {
+  document.getElementById('repairYtdChartTitle').textContent = vehicle
+    ? `ค่าซ่อมประจำเดือนของ ${vehicle}` : 'ค่าซ่อมประจำเดือน (ทั้งกองรถ)';
+  document.getElementById('repairYtdChartDesc').textContent = vehicle
+    ? `แสดงยอดค่าซ่อมของ ${vehicle} แต่ละเดือน ตั้งแต่ ม.ค. ถึงเดือนที่เลือกไว้ในตัวกรอง`
+    : 'แสดงยอดรวมค่าซ่อมแต่ละเดือน ตั้งแต่ ม.ค. ถึงเดือนที่เลือกไว้ในตัวกรอง — ตามเงื่อนไข BU/รถ/ประเภทงาน/ศูนย์ซ่อมที่กรองอยู่';
 
   destroyChart('repairYtd');
   const ctx = document.getElementById('repairYtdChart').getContext('2d');
   CHARTS.repairYtd = new Chart(ctx, {
     type: 'bar',
-    data: { labels: YTD_MONTH_LABELS, datasets },
+    data: { labels: monthLabels, datasets: [{ label: 'ค่าซ่อม', data: monthlyTotals, backgroundColor: c.s1, borderRadius: 4, maxBarThickness: 40 }] },
     options: {
       responsive: true, maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { position: 'bottom', labels: { color: c.textSecondary, boxWidth: 11, boxHeight: 11, padding: 12, font: { size: 11.5 } } },
+        legend: { display: false },
         tooltip: {
           backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1,
-          callbacks: {
-            title: (items) => items[0].label,
-            beforeBody: (items) => {
-              const m = items[0].dataIndex;
-              const r = rankings[m];
-              const total = r.reduce((a, x) => a + x.cost, 0);
-              const othersRows = r.slice(3);
-              const othersTotal = othersRows.reduce((a, x) => a + x.cost, 0);
-              const lines = ['ยอดรวมค่าซ่อมประจำเดือน: ฿' + fmt(total, 2), ''];
-              [0, 1, 2].forEach(i => { if (r[i]) lines.push(`${i + 1}. ${r[i].vehicle} — ฿${fmt(r[i].cost, 2)}`); });
-              if (othersRows.length) lines.push(`อื่นๆ (${othersRows.length} คัน) — ฿${fmt(othersTotal, 2)}`);
-              return lines;
-            },
-            label: () => null,
-          }
+          callbacks: { label: (item) => ` ฿${fmt(item.raw, 2)}` },
         }
       },
       scales: {
-        x: { stacked: true, grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } },
-        y: { stacked: true, ticks: { color: c.muted, font: { size: 11 }, callback: (v) => '฿' + (v / 1000) + 'k' }, grid: { color: c.grid } }
-      }
-    }
-  });
-}
-
-// SINGLE mode — one vehicle's monthly bars, stacked by its real "ประเภทงาน"
-// (repair category) so users can see which kind of work drove the cost.
-function renderRepairYtdSingleChart(c, catDefs, viewRows, vehicle) {
-  document.getElementById('repairYtdChartTitle').textContent = `ค่าซ่อมประจำเดือนของ ${vehicle} แยกตามประเภทงาน`;
-
-  const monthlyByCat = {};
-  catDefs.forEach(d => { monthlyByCat[d.name] = { color: d.color, data: new Array(12).fill(0) }; });
-  viewRows.forEach(r => {
-    const mIdx = parseInt((r.ym.split('-')[1] || '0'), 10) - 1;
-    if (mIdx < 0 || mIdx >= 12) return;
-    const cat = resolveRepairCategory(r.categoryRaw, catDefs);
-    if (!monthlyByCat[cat.name]) monthlyByCat[cat.name] = { color: cat.color, data: new Array(12).fill(0) };
-    monthlyByCat[cat.name].data[mIdx] += r.cost;
-  });
-  const datasets = Object.entries(monthlyByCat)
-    .filter(([, v]) => v.data.some(val => val > 0))
-    .map(([name, v]) => ({ label: name, data: v.data, backgroundColor: v.color, borderRadius: 3, maxBarThickness: 34 }));
-
-  destroyChart('repairYtd');
-  const ctx = document.getElementById('repairYtdChart').getContext('2d');
-  CHARTS.repairYtd = new Chart(ctx, {
-    type: 'bar',
-    data: { labels: YTD_MONTH_LABELS, datasets },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: { position: 'bottom', labels: { color: c.textSecondary, boxWidth: 11, boxHeight: 11, padding: 12, font: { size: 11.5 } } },
-        tooltip: {
-          backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1,
-          itemSort: (a, b) => b.raw - a.raw,
-          callbacks: {
-            title: (items) => items[0].label,
-            beforeBody: (items) => {
-              const total = items.reduce((a, it) => a + it.raw, 0);
-              return [`ค่าซ่อมเดือนนี้ (${vehicle}): ฿` + fmt(total, 2), ''];
-            },
-            label: (item) => item.raw > 0 ? ` ${item.dataset.label}: ฿${fmt(item.raw, 2)}` : null,
-          }
-        }
-      },
-      scales: {
-        x: { stacked: true, grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } },
-        y: { stacked: true, ticks: { color: c.muted, font: { size: 11 }, callback: (v) => '฿' + (v / 1000) + 'k' }, grid: { color: c.grid } }
+        x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } },
+        y: { ticks: { color: c.muted, font: { size: 11 }, callback: (v) => '฿' + (v / 1000) + 'k' }, grid: { color: c.grid } }
       }
     }
   });
