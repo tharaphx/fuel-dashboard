@@ -138,6 +138,10 @@
   }
   #statusMsg { font-size: 15px; color: var(--text-muted); }
   #statusMsg.err { color: var(--critical); }
+  /* Zone 4's own filters, merged into the top filter area — hidden unless
+     Zone 4 is the active tab (switchZoneTab toggles the "active" class). */
+  .zone4-filter-bar { display: none; padding-top: 12px; padding-bottom: 12px; }
+  .zone4-filter-bar.active { display: flex; }
 
   main { max-width: 1600px; margin: 0 auto; padding: 26px 28px 70px; }
   .block { margin-bottom: 40px; }
@@ -432,6 +436,17 @@
   <div id="statusMsgBar" style="font-size:15px;color:var(--text-muted);"></div>
 </div>
 
+<!-- Zone 4-only filters — lived inside the Zone 4 panel body before (buried
+     below the KPI cards and charts); moved up here next to the main filters
+     so all filtering happens in one place. Only visible while Zone 4 is the
+     active tab (toggled by switchZoneTab via the "active" class). -->
+<div class="filter-bar zone4-filter-bar" id="zone4FilterBar">
+  <div><label for="repairVehicleFilter">รถ (ทะเบียน)</label><select id="repairVehicleFilter"><option value="ALL">ทุกคัน</option></select></div>
+  <div><label for="repairTagFilter">ประเภทงาน</label><select id="repairTagFilter"><option value="ALL">ทุกประเภทงาน</option></select></div>
+  <div><label for="repairShopFilter">ศูนย์ซ่อม</label><select id="repairShopFilter"><option value="ALL">ทุกศูนย์ซ่อม</option></select></div>
+  <div><label for="repairSearchInput">ค้นหา</label><input id="repairSearchInput" placeholder="ทะเบียนรถ / รายการซ่อม / Route ID" style="min-width:220px;"></div>
+</div>
+
 <div id="app" style="display:none;">
 <main>
 
@@ -615,14 +630,6 @@
       </div>
     </div>
 
-    <div class="repair-controls">
-      <div class="left">
-        <input id="repairSearchInput" placeholder="ค้นหา ทะเบียนรถ / รายการซ่อม / Route ID" style="min-width:240px;">
-        <select id="repairTagFilter"><option value="ALL">ทุกประเภทงาน</option></select>
-        <select id="repairShopFilter"><option value="ALL">ทุกศูนย์ซ่อม</option></select>
-      </div>
-    </div>
-
     <div id="repairAccordionWrap"></div>
     <div class="foot-note">"ประเภทงาน" (อะไหล่ / ค่าแรง / ยาง) จัดหมวดอัตโนมัติจากคำในชื่อรายการซ่อม อาจไม่ตรง 100% — ถ้าต้องการความแม่นยำเต็มที่ แนะนำเพิ่มคอลัมน์ "ประเภทงาน" ในชีต "ซ่อมบำรุง" โดยตรง</div>
   </section>
@@ -762,7 +769,7 @@ let RAW = [];
 let RAW_REPAIR = [];
 let TARGET_CASH_BY_BU = {};
 let FUEL_DIFF_TOLERANCE_PCT = 0.5;
-let STATE = { ym: null, bu: 'ALL', search: '', sortKey: 'liters', sortDir: 'desc', repairSearch: '', repairTag: 'ALL', repairShop: 'ALL', repairYtdMode: 'TOP3', repairYtdVehicle: '', excSeverity: 'ALL', excRule: 'ALL' };
+let STATE = { ym: null, bu: 'ALL', search: '', sortKey: 'liters', sortDir: 'desc', repairSearch: '', repairTag: 'ALL', repairShop: 'ALL', repairVehicle: 'ALL', repairYtdMode: 'TOP3', repairYtdVehicle: '', excSeverity: 'ALL', excRule: 'ALL' };
 let CHARTS = {};
 let LAST_ROWDATA = [];
 
@@ -1010,6 +1017,7 @@ function initFilters() {
     renderRepairZone();
   });
   document.getElementById('repairShopFilter').addEventListener('change', (e) => { STATE.repairShop = e.target.value; renderRepairZone(); });
+  document.getElementById('repairVehicleFilter').addEventListener('change', (e) => { STATE.repairVehicle = e.target.value; renderRepairZone(); });
 }
 
 function getRows(ym, bu) { return RAW.filter(r => r.ym === ym && (bu === 'ALL' || r.bu === bu)); }
@@ -1019,6 +1027,7 @@ function destroyChart(id) { if (CHARTS[id]) { CHARTS[id].destroy(); delete CHART
 function switchZoneTab(panelId) {
   document.querySelectorAll('.zone-tab').forEach(t => t.classList.toggle('active', t.getAttribute('data-zone') === panelId));
   document.querySelectorAll('.zone-panel').forEach(p => p.classList.toggle('active', p.id === panelId));
+  document.getElementById('zone4FilterBar').classList.toggle('active', panelId === 'zonePanel4');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -1829,11 +1838,19 @@ function renderRepairZone() {
 
   document.getElementById('repairTitle').textContent = `(${monthRows.length} รายการ)`;
 
-  // Populate category/shop filter dropdowns once per render (cheap enough; option list rarely changes).
+  // Populate vehicle/category/shop filter dropdowns once per render (cheap enough; option list rarely changes).
+  const vehicleSelect = document.getElementById('repairVehicleFilter');
   const tagSelect = document.getElementById('repairTagFilter');
   const shopSelect = document.getElementById('repairShopFilter');
+  const allVehicles = [...new Set(monthRows.map(r => r.vehicle))].sort();
   const allCats = [...new Set(monthRows.map(r => r.category.name))].sort();
   const allShops = [...new Set(monthRows.map(r => r.shop))].sort();
+  if (vehicleSelect.dataset.count != allVehicles.length) {
+    vehicleSelect.innerHTML = '<option value="ALL">ทุกคัน</option>' + allVehicles.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+    vehicleSelect.value = allVehicles.includes(STATE.repairVehicle) ? STATE.repairVehicle : 'ALL';
+    STATE.repairVehicle = vehicleSelect.value;
+    vehicleSelect.dataset.count = allVehicles.length;
+  }
   if (tagSelect.dataset.count != allCats.length) {
     tagSelect.innerHTML = '<option value="ALL">ทุกประเภทงาน</option>' + allCats.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
     tagSelect.value = STATE.repairTag; tagSelect.dataset.count = allCats.length;
@@ -1845,6 +1862,7 @@ function renderRepairZone() {
 
   const q = STATE.repairSearch;
   const filtered = monthRows.filter(r => {
+    if (STATE.repairVehicle !== 'ALL' && r.vehicle !== STATE.repairVehicle) return false;
     if (STATE.repairTag !== 'ALL' && r.category.name !== STATE.repairTag) return false;
     if (STATE.repairShop !== 'ALL' && r.shop !== STATE.repairShop) return false;
     if (q && !(r.vehicle.toLowerCase().includes(q) || r.item.toLowerCase().includes(q) || r.routeId.toLowerCase().includes(q) || r.bu.toLowerCase().includes(q))) return false;
