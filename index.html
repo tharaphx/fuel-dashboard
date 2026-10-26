@@ -138,6 +138,14 @@
   }
   #statusMsg { font-size: 15px; color: var(--text-muted); }
   #statusMsg.err { color: var(--critical); }
+  /* Month-range filter — replaces the old single "เดือน-ปี" dropdown. */
+  .custom-range-fields { display: none; align-items: center; gap: 20px; }
+  .custom-range-fields.show { display: flex; }
+  .range-pill {
+    display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14.5px;
+    padding: 7px 14px; border-radius: 20px; color: var(--series-1);
+    background: color-mix(in srgb, var(--series-1) 10%, transparent);
+  }
   /* Zone 4's own filters, merged into the top filter area — hidden unless
      Zone 4 is the active tab (switchZoneTab toggles the "active" class). */
   .zone4-filter-bar { display: none; padding-top: 12px; padding-bottom: 12px; }
@@ -417,8 +425,13 @@
 </div>
 
 <div class="filter-bar">
-  <div><label for="ymSelect">เดือน-ปี</label><select id="ymSelect"></select></div>
+  <div><label for="rangePreset">ช่วงเวลา</label><select id="rangePreset"></select></div>
+  <div class="custom-range-fields" id="customRangeFields">
+    <div><label for="fromMonthSelect">จากเดือน</label><select id="fromMonthSelect"></select></div>
+    <div><label for="toMonthSelect">ถึงเดือน</label><select id="toMonthSelect"></select></div>
+  </div>
   <div><label for="buSelect">หน่วยธุรกิจ (BU)</label><select id="buSelect"></select></div>
+  <div class="range-pill" id="rangePill"></div>
   <div id="statusMsgBar" style="font-size:15px;color:var(--text-muted);"></div>
 </div>
 
@@ -747,7 +760,7 @@ let RAW = [];
 let RAW_REPAIR = [];
 let TARGET_CASH_BY_BU = {};
 let FUEL_DIFF_TOLERANCE_PCT = 0.5;
-let STATE = { ym: null, bu: 'ALL', sortKey: 'liters', sortDir: 'desc', repairTag: 'ALL', repairShop: 'ALL', repairVehicle: 'ALL', excSeverity: 'ALL', excRule: 'ALL' };
+let STATE = { fromYm: null, toYm: null, rangePreset: 'latest', bu: 'ALL', sortKey: 'liters', sortDir: 'desc', repairTag: 'ALL', repairShop: 'ALL', repairVehicle: 'ALL', excSeverity: 'ALL', excRule: 'ALL' };
 let CHARTS = {};
 let LAST_ROWDATA = [];
 
@@ -914,23 +927,124 @@ function prevYearYM(ym) { const [y, m] = ym.split('-'); return (parseInt(y, 10) 
 function prevMonthYM(ym) { let [y, m] = ym.split('-').map(Number); m -= 1; if (m < 1) { m = 12; y -= 1; } return y + '-' + String(m).padStart(2, '0'); }
 function monthsTrailing(ym, n) { const list = [ym]; let cur = ym; for (let i = 1; i < n; i++) { cur = prevMonthYM(cur); list.unshift(cur); } return list; }
 
+// --- Month-range helpers (the dashboard filters on a [fromYm, toYm] range
+// everywhere now, not a single month) ---
+function ymToIndex(ym) { const [y, m] = ym.split('-').map(Number); return y * 12 + (m - 1); }
+function indexToYm(idx) { const y = Math.floor(idx / 12), m = (idx % 12) + 1; return y + '-' + String(m).padStart(2, '0'); }
+// Every "YYYY-MM" month from fromYm to toYm inclusive.
+function monthsInRange(fromYm, toYm) {
+  const list = [];
+  for (let i = ymToIndex(fromYm); i <= ymToIndex(toYm); i++) list.push(indexToYm(i));
+  return list;
+}
+// YoY comparison for a range: shift both ends back exactly one year, so a
+// 3-month range compares against the same 3 months the year before.
+function yoyShiftRange(fromYm, toYm) { return [prevYearYM(fromYm), prevYearYM(toYm)]; }
+// Period-over-period comparison: shift the whole range back by its own
+// length, giving the immediately preceding period of equal size (used for
+// the repair-cost KPI card, which intentionally compares to the period
+// right before rather than the same period last year).
+function prevPeriodShiftRange(fromYm, toYm) {
+  const n = ymToIndex(toYm) - ymToIndex(fromYm) + 1;
+  return [indexToYm(ymToIndex(fromYm) - n), indexToYm(ymToIndex(toYm) - n)];
+}
+function thaiMonthShort(ym) { const m = parseInt((ym || '').split('-')[1], 10) - 1; return YTD_MONTH_LABELS[m] || ym; }
+// Human-readable label for a range, e.g. "ก.ค. 69 - ก.ย. 69" (or just
+// "ก.ค. 69" when it's a single month). Buddhist year shown 2-digit to keep
+// it compact, matching how Thai business dashboards normally abbreviate it.
+function rangeLabel(fromYm, toYm) {
+  const yy = (ym) => (ym || '').split('-')[0].slice(-2);
+  const f = `${thaiMonthShort(fromYm)} ${yy(fromYm)}`;
+  if (fromYm === toYm) return f;
+  return `${f} - ${thaiMonthShort(toYm)} ${yy(toYm)}`;
+}
+// Builds the preset-range options from the months actually present in the
+// sheet. Quarters/YTD are anchored to the year of the latest available
+// month (not the device's current date), so the dashboard stays correct
+// however far the sheet's data lags behind today.
+function buildRangePresets(months) {
+  const latestYm = months[months.length - 1];
+  const latestYear = latestYm.split('-')[0];
+  const q = (n) => [`${latestYear}-${String(n * 3 - 2).padStart(2, '0')}`, `${latestYear}-${String(n * 3).padStart(2, '0')}`];
+  return [
+    { key: 'latest', label: 'เดือนล่าสุด', range: [latestYm, latestYm] },
+    { key: 'q1', label: `Q1 (${rangeLabel(...q(1))})`, range: q(1) },
+    { key: 'q2', label: `Q2 (${rangeLabel(...q(2))})`, range: q(2) },
+    { key: 'q3', label: `Q3 (${rangeLabel(...q(3))})`, range: q(3) },
+    { key: 'q4', label: `Q4 (${rangeLabel(...q(4))})`, range: q(4) },
+    { key: 'ytd', label: 'YTD (ม.ค. - เดือนปัจจุบัน)', range: [`${latestYear}-01`, latestYm] },
+    { key: 'custom', label: 'กำหนดเอง...', range: null },
+  ];
+}
+
 let FILTERS_BOUND = false;
 
+let RANGE_PRESETS = [];
+let ALL_MONTHS = [];
+
+// Applies a [fromYm, toYm] pair to STATE + the custom-range selects' values,
+// updates the range pill text, and re-renders. Shared by the preset dropdown
+// and by the custom from/to selects so they can never disagree.
+function applyRange(fromYm, toYm) {
+  STATE.fromYm = fromYm; STATE.toYm = toYm;
+  document.getElementById('fromMonthSelect').value = fromYm;
+  document.getElementById('toMonthSelect').value = toYm;
+  const n = monthsInRange(fromYm, toYm).length;
+  document.getElementById('rangePill').textContent = `${rangeLabel(fromYm, toYm)} (${n} เดือน)`;
+  renderAll();
+}
+
 function initFilters() {
-  const months = [...new Set(RAW.map(r => r.ym))].sort();
+  ALL_MONTHS = [...new Set(RAW.map(r => r.ym))].sort();
   const bus = [...new Set(RAW.map(r => r.bu))].sort();
-  const ymSelect = document.getElementById('ymSelect');
+  const presetSelect = document.getElementById('rangePreset');
+  const fromSelect = document.getElementById('fromMonthSelect');
+  const toSelect = document.getElementById('toMonthSelect');
   const buSelect = document.getElementById('buSelect');
-  ymSelect.innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join('');
-  ymSelect.value = months[months.length - 1];
-  STATE.ym = ymSelect.value;
+
+  RANGE_PRESETS = buildRangePresets(ALL_MONTHS);
+  presetSelect.innerHTML = RANGE_PRESETS.map(p => `<option value="${p.key}">${escapeHtml(p.label)}</option>`).join('');
+  fromSelect.innerHTML = ALL_MONTHS.map(m => `<option value="${m}">${rangeLabel(m, m)}</option>`).join('');
+  toSelect.innerHTML = fromSelect.innerHTML;
+
   buSelect.innerHTML = '<option value="ALL">ทั้งหมด</option>';
   bus.forEach(b => { const opt = document.createElement('option'); opt.value = b; opt.textContent = b; buSelect.appendChild(opt); });
+
+  // Default to "เดือนล่าสุด" on first load.
+  presetSelect.value = STATE.rangePreset || 'latest';
+  const initPreset = RANGE_PRESETS.find(p => p.key === presetSelect.value) || RANGE_PRESETS[0];
+  if (initPreset.range) {
+    applyRange(...initPreset.range);
+  } else {
+    document.getElementById('customRangeFields').classList.add('show');
+    applyRange(ALL_MONTHS[ALL_MONTHS.length - 1], ALL_MONTHS[ALL_MONTHS.length - 1]);
+  }
 
   if (FILTERS_BOUND) return;
   FILTERS_BOUND = true;
 
-  ymSelect.addEventListener('change', () => { STATE.ym = ymSelect.value; renderAll(); });
+  presetSelect.addEventListener('change', () => {
+    STATE.rangePreset = presetSelect.value;
+    const preset = RANGE_PRESETS.find(p => p.key === presetSelect.value);
+    const customFields = document.getElementById('customRangeFields');
+    if (!preset || !preset.range) {
+      customFields.classList.add('show');
+      applyRange(STATE.fromYm || ALL_MONTHS[ALL_MONTHS.length - 1], STATE.toYm || ALL_MONTHS[ALL_MONTHS.length - 1]);
+    } else {
+      customFields.classList.remove('show');
+      applyRange(...preset.range);
+    }
+  });
+  fromSelect.addEventListener('change', () => {
+    let toVal = toSelect.value;
+    if (fromSelect.value > toVal) toVal = fromSelect.value;
+    applyRange(fromSelect.value, toVal);
+  });
+  toSelect.addEventListener('change', () => {
+    let fromVal = fromSelect.value;
+    if (toSelect.value < fromVal) fromVal = toSelect.value;
+    applyRange(fromVal, toSelect.value);
+  });
   buSelect.addEventListener('change', () => { STATE.bu = buSelect.value; renderAll(); });
 
   document.querySelectorAll('#unifiedTable thead th').forEach(th => {
@@ -1009,9 +1123,12 @@ function setKpi(id, text) { document.getElementById(id).textContent = text; }
 function renderDelta(elId, curVal, prevVal, opts = {}) {
   const el = document.getElementById(elId);
   const label = opts.label || 'จากปีก่อน';
-  if (prevVal === null || prevVal === undefined) { el.innerHTML = `<span class="delta flat">ไม่มีข้อมูล${label.startsWith('จากเดือน') ? 'เดือนก่อน' : 'ปีก่อน'}</span>`; return; }
+  // noDataLabel lets a caller spell out what's missing (เดือนก่อน/ปีก่อน/
+  // ช่วงก่อนหน้า, ...); defaults to a generic phrase derived from opts.label.
+  const noDataLabel = opts.noDataLabel || (label.startsWith('จากเดือน') ? 'เดือนก่อน' : label.startsWith('จากช่วง') ? 'ช่วงก่อนหน้า' : 'ปีก่อน');
+  if (prevVal === null || prevVal === undefined) { el.innerHTML = `<span class="delta flat">ไม่มีข้อมูล${noDataLabel}</span>`; return; }
   const gap = pct(curVal, prevVal);
-  if (gap === null) { el.innerHTML = `<span class="delta flat">ไม่มีข้อมูล${label.startsWith('จากเดือน') ? 'เดือนก่อน' : 'ปีก่อน'}</span>`; return; }
+  if (gap === null) { el.innerHTML = `<span class="delta flat">ไม่มีข้อมูล${noDataLabel}</span>`; return; }
   // opts.invert flips the good/bad color mapping — used for metrics where a
   // decrease is the desirable direction (e.g. repair cost going down is good).
   const isGood = opts.invert ? gap <= 0 : gap >= 0;
@@ -1029,13 +1146,15 @@ function sparkline(canvasId, data, color, c, opts = {}) {
 
 function renderAll() {
   const c = COLORS();
-  const ym = STATE.ym, bu = STATE.bu;
-  if (!ym) return;
-  const prevYm = prevYearYM(ym);
-  const curRows = getRows(ym, bu);
-  const prevRows = getRows(prevYm, bu);
+  const fromYm = STATE.fromYm, toYm = STATE.toYm, bu = STATE.bu;
+  if (!fromYm || !toYm) return;
+  const months = monthsInRange(fromYm, toYm);
+  const [prevFromYm, prevToYm] = yoyShiftRange(fromYm, toYm);
+  const prevMonths = monthsInRange(prevFromYm, prevToYm);
+  const curRows = months.flatMap(m => getRows(m, bu));
+  const prevRows = prevMonths.flatMap(m => getRows(m, bu));
 
-  document.getElementById('ovTitle').textContent = `(${ym} เทียบ ${prevYm})`;
+  document.getElementById('ovTitle').textContent = `(${rangeLabel(fromYm, toYm)} เทียบ ${rangeLabel(prevFromYm, prevToYm)})`;
   document.getElementById('vehTitle').textContent = `(${[...new Set(curRows.map(r => r.routeId))].length} เส้นทาง)`;
 
   const curLiters = sum(curRows, 'cashL') + sum(curRows, 'creditL');
@@ -1074,7 +1193,11 @@ function renderAll() {
     options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { display: false }, tooltip: { backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1 } } },
   });
 
-  const trailMonths = monthsTrailing(ym, 12);
+  // Sparklines now plot only the months inside the selected range (not a
+  // fixed trailing-12 window) — consistent with Zone 2's trend charts and
+  // Zone 4's YTD chart, both of which switched to the same "range months
+  // only" behavior.
+  const trailMonths = months;
   const trailLitersArr = trailMonths.map(m => { const rs = getRows(m, bu); return sum(rs, 'cashL') + sum(rs, 'creditL'); });
   const trailGPArr = trailMonths.map(m => sum(getRows(m, bu), 'grossProfit'));
   const trailFuelRateArr = trailMonths.map(m => { const rs = getRows(m, bu).filter(r => r.fuelRate); return rs.length ? avg(rs.map(r => r.fuelRate)) : 0; });
@@ -1099,13 +1222,15 @@ function renderAll() {
   }
 
   // Card 6 "ค่าซ่อมบำรุงรวม" — same repairCost figure already summed per
-  // BU+month for Zone 3/4; compared month-over-month (not YoY like the other
-  // cards) since repair spend is noisy and a MoM read is more actionable.
+  // BU+month for Zone 3/4; compared period-over-period (not YoY like the
+  // other cards) since repair spend is noisy and a recent-period read is
+  // more actionable. Generalizes the old "MoM" comparison to "the equal-
+  // length period right before this one" now that the filter is a range.
   const curRepairTotal = sum(curRows, 'repairCost');
-  const prevMonthYm = prevMonthYM(ym);
-  const prevMonthRepairTotal = sum(getRows(prevMonthYm, bu), 'repairCost');
+  const [prevPeriodFromYm, prevPeriodToYm] = prevPeriodShiftRange(fromYm, toYm);
+  const prevPeriodRepairTotal = sum(monthsInRange(prevPeriodFromYm, prevPeriodToYm).flatMap(m => getRows(m, bu)), 'repairCost');
   setKpi('kpiRepairTotal', fmt(curRepairTotal, 2));
-  renderDelta('kpiRepairDelta', curRepairTotal, prevMonthRepairTotal || null, { label: 'จากเดือนก่อน', invert: true });
+  renderDelta('kpiRepairDelta', curRepairTotal, prevPeriodRepairTotal || null, { label: 'จากช่วงก่อนหน้า', invert: true });
 
   const routeIds = [...new Set(curRows.map(r => r.routeId))];
   const curByVeh = byVeh(curRows);
@@ -1152,7 +1277,7 @@ function renderAll() {
   renderScatter(rowData, c);
   renderTrips(rowData, c);
   renderFuelDiffBig(rowData, c);
-  renderTrend(ym, bu, c);
+  renderTrend(fromYm, toYm, bu, c);
   renderRepairZone();
   // Runs after renderExceptions() so FLAGGED_ROUTES is already populated for this month.
   renderAlertBar(rowData);
@@ -1671,8 +1796,8 @@ function z2ValueLabelsPlugin(labelFn, color) {
 // Abbreviated "Nk" formatting shared by the trend charts' axis ticks and
 // their on-point value labels, so both read consistently (e.g. "139.8k").
 function z2FmtK(v, prefix = '') { return prefix + (Math.round(v / 10000) / 100) + 'M'; }
-function renderTrend(ym, bu, c) {
-  const trailMonths = monthsTrailing(ym, 12);
+function renderTrend(fromYm, toYm, bu, c) {
+  const trailMonths = monthsInRange(fromYm, toYm);
   const litersArr = trailMonths.map(m => { const rs = getRows(m, bu); return sum(rs, 'cashL') + sum(rs, 'creditL'); });
   const gpArr = trailMonths.map(m => sum(getRows(m, bu), 'grossProfit'));
   const maxLitersIdx = litersArr.indexOf(Math.max(...litersArr));
@@ -1786,8 +1911,9 @@ function routeIdForRepair(r) {
 function renderRepairZone() {
   const c = COLORS();
   const catDefs = getRepairCategoryDefs(c);
-  const ym = STATE.ym, bu = STATE.bu;
-  const monthRows = RAW_REPAIR.filter(r => r.ym === ym && (bu === 'ALL' || r.bu === bu))
+  const bu = STATE.bu;
+  const rangeMonths = new Set(monthsInRange(STATE.fromYm, STATE.toYm));
+  const monthRows = RAW_REPAIR.filter(r => rangeMonths.has(r.ym) && (bu === 'ALL' || r.bu === bu))
     .map(r => ({ ...r, routeId: routeIdForRepair(r), category: resolveRepairCategory(r.categoryRaw, catDefs) }));
 
   document.getElementById('repairTitle').textContent = `(${monthRows.length} รายการ)`;
@@ -1893,39 +2019,37 @@ function toggleRepairAccordion(plate) {
 }
 
 // ---------------------------------------------------------------------
-// Zone 4 — YTD cumulative maintenance chart + repair-category donut
-// Spans the whole calendar year of the currently selected "เดือน-ปี" filter
-// (independent of which single month that filter picks), respecting the BU
-// filter. A separate vehicle picker (Fleet vs one vehicle) controls both the
-// line chart and the donut; clicking a donut slice / legend row cross-filters
-// the repair table below by setting the existing "ประเภทงาน" dropdown.
+// Zone 4 — "YTD" cumulative maintenance chart + repair-category donut
+// Spans exactly the selected month-range filter (STATE.fromYm..STATE.toYm),
+// respecting the BU filter. A separate vehicle picker (Fleet vs one vehicle)
+// controls both the line chart and the donut; clicking a donut slice / legend
+// row cross-filters the repair table below by setting the existing
+// "ประเภทงาน" dropdown.
 // ---------------------------------------------------------------------
 const YTD_MONTH_LABELS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
 function renderRepairYtdSection(c, catDefs) {
-  const year = (STATE.ym || '').split('-')[0];
-  const selectedMonthIdx = parseInt((STATE.ym || '').split('-')[1], 10) - 1; // 0-based, e.g. May -> 4
+  const rangeMonths = monthsInRange(STATE.fromYm, STATE.toYm);
+  const rangeMonthSet = new Set(rangeMonths);
   const bu = STATE.bu;
 
-  // Fully filter-reactive: เดือน-ปี (via the Jan..selected-month truncation
-  // below), หน่วยธุรกิจ, รถ, ประเภทงาน, ศูนย์ซ่อม all apply here, so this
-  // whole YTD block (KPIs, chart, donut) shows exactly what's selected —
-  // not a separate "always whole fleet" view like before.
-  const yearRowsAll = RAW_REPAIR.filter(r => r.ym.startsWith(year + '-') && (bu === 'ALL' || r.bu === bu))
-    .map(r => ({ ...r, category: resolveRepairCategory(r.categoryRaw, catDefs) }));
-  const yearRows = yearRowsAll.filter(r => {
-    const mIdx = parseInt((r.ym.split('-')[1] || '0'), 10) - 1;
-    if (mIdx < 0 || mIdx > selectedMonthIdx) return false; // ม.ค. ถึงเดือนที่เลือกเท่านั้น
-    if (STATE.repairVehicle !== 'ALL' && r.vehicle !== STATE.repairVehicle) return false;
-    if (STATE.repairTag !== 'ALL' && r.category.name !== STATE.repairTag) return false;
-    if (STATE.repairShop !== 'ALL' && r.shop !== STATE.repairShop) return false;
-    return true;
-  });
-  const monthLabels = YTD_MONTH_LABELS.slice(0, Math.max(0, selectedMonthIdx + 1));
+  // Fully filter-reactive: ช่วงเดือนที่เลือก, หน่วยธุรกิจ, รถ, ประเภทงาน,
+  // ศูนย์ซ่อม all apply here, so this whole "YTD" block (KPIs, chart, donut —
+  // now really "selected range", not literally Jan-to-month) shows exactly
+  // what's selected — not a separate "always whole fleet/year" view.
+  const yearRows = RAW_REPAIR.filter(r => rangeMonthSet.has(r.ym) && (bu === 'ALL' || r.bu === bu))
+    .map(r => ({ ...r, category: resolveRepairCategory(r.categoryRaw, catDefs) }))
+    .filter(r => {
+      if (STATE.repairVehicle !== 'ALL' && r.vehicle !== STATE.repairVehicle) return false;
+      if (STATE.repairTag !== 'ALL' && r.category.name !== STATE.repairTag) return false;
+      if (STATE.repairShop !== 'ALL' && r.shop !== STATE.repairShop) return false;
+      return true;
+    });
+  const monthLabels = rangeMonths.map(m => thaiMonthShort(m));
 
   const monthlyTotals = new Array(monthLabels.length).fill(0);
   yearRows.forEach(r => {
-    const mIdx = parseInt((r.ym.split('-')[1] || '0'), 10) - 1;
+    const mIdx = rangeMonths.indexOf(r.ym);
     if (mIdx >= 0 && mIdx < monthlyTotals.length) monthlyTotals[mIdx] += r.cost;
   });
   const ytdTotal = monthlyTotals.reduce((a, b) => a + b, 0);
@@ -1955,8 +2079,8 @@ function renderRepairYtdChart(c, monthLabels, monthlyTotals, vehicle) {
   document.getElementById('repairYtdChartTitle').textContent = vehicle
     ? `ค่าซ่อมประจำเดือนของ ${vehicle}` : 'ค่าซ่อมประจำเดือน (ทั้งกองรถ)';
   document.getElementById('repairYtdChartDesc').textContent = vehicle
-    ? `แสดงยอดค่าซ่อมของ ${vehicle} แต่ละเดือน ตั้งแต่ ม.ค. ถึงเดือนที่เลือกไว้ในตัวกรอง`
-    : 'แสดงยอดรวมค่าซ่อมแต่ละเดือน ตั้งแต่ ม.ค. ถึงเดือนที่เลือกไว้ในตัวกรอง — ตามเงื่อนไข BU/รถ/ประเภทงาน/ศูนย์ซ่อมที่กรองอยู่';
+    ? `แสดงยอดค่าซ่อมของ ${vehicle} แต่ละเดือน ในช่วงเดือนที่เลือกไว้ในตัวกรอง`
+    : 'แสดงยอดรวมค่าซ่อมแต่ละเดือน ในช่วงเดือนที่เลือกไว้ในตัวกรอง — ตามเงื่อนไข BU/รถ/ประเภทงาน/ศูนย์ซ่อมที่กรองอยู่';
 
   destroyChart('repairYtd');
   const ctx = document.getElementById('repairYtdChart').getContext('2d');
