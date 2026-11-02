@@ -523,7 +523,7 @@
         <div class="chart-card">
           <div class="badge-highlight" id="z2BadgeTrips" style="color:#6366f1;background:rgba(99,102,241,.1);"></div>
           <h3>จำนวนเที่ยววิ่งรายเส้นทางประจำเดือน</h3>
-          <div class="desc">แสดงเฉพาะเส้นทางที่มีเที่ยววิ่ง (&gt; 0)</div>
+          <div class="desc">แสดงเฉพาะเส้นทางที่มีเที่ยววิ่ง (&gt; 0) · แยกแท่งตามรถเมื่อเส้นทางเดียวกันมีหลายคันในช่วงที่เลือก</div>
           <div class="chart-wrap"><canvas id="tripsChart"></canvas></div>
         </div>
         <div class="chart-card">
@@ -534,9 +534,13 @@
         </div>
         <div class="chart-card full-span">
           <div class="badge-highlight" id="z2BadgeScatter" style="color:var(--text-secondary);background:color-mix(in srgb, var(--text-secondary) 10%, transparent);"></div>
-          <h3>ความสัมพันธ์ ค่าซ่อม vs อัตราการใช้น้ำมัน</h3>
-          <div class="desc">แต่ละจุด = 1 เส้นทาง (Route ID) · ขนาดจุด = ยอดขายลิตร · สี = BU</div>
-          <div class="chart-wrap"><canvas id="scatterChart"></canvas></div>
+          <h3>ความสัมพันธ์ ค่าซ่อม vs อัตราการใช้น้ำมัน (Quadrant Analysis)</h3>
+          <div class="desc">แต่ละจุด = 1 เส้นทาง (Route ID) · ขนาดจุด = ยอดขายลิตร · สี = BU · เส้นประ = ค่าเฉลี่ยของข้อมูลที่กรองอยู่</div>
+          <div class="chart-wrap" style="height:340px;"><canvas id="scatterChart"></canvas></div>
+          <div class="legend-row" style="display:flex;gap:14px;margin-top:10px;font-size:11.5px;color:var(--text-secondary);flex-wrap:wrap;">
+            <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:middle;background:#ef444422;"></span>🔴 โซนต้องปรับปรุง/วิกฤต (ซ่อมสูง + อัตราต่ำกว่าเป้า)</span>
+            <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:middle;background:#10b98122;"></span>🟢 โซนประสิทธิภาพสูง (ซ่อมต่ำ + อัตราดีกว่าเป้า)</span>
+          </div>
         </div>
       </div>
     </div>
@@ -1285,7 +1289,7 @@ function renderAll() {
   renderExceptions(rowData, c);
   renderTable(rowData);
   renderScatter(rowData, c);
-  renderTrips(rowData, c);
+  renderTrips(curRows, c);
   renderFuelDiffBig(rowData, c);
   renderTrend(toYm, bu, c);
   renderTop5(rowData, c);
@@ -1608,23 +1612,113 @@ function z2VGradient(ctx, area, colorTop, colorBottom) {
 }
 const z2GridStyle = (c) => ({ color: c.grid, borderDash: [4, 4] });
 
+// Background shading for the two quadrants the spec calls out — critical
+// (high repair cost + fuel rate below target) in red, bottom-right; high
+// performance (low repair cost + fuel rate above target) in green,
+// top-left. The other two quadrants are intentionally left unshaded since
+// the spec didn't assign them a meaning.
+function z2QuadrantShadingPlugin(repairAvg, fuelRateAvg) {
+  return {
+    id: 'z2QuadrantShading',
+    beforeDatasetsDraw(chart) {
+      const { ctx, chartArea, scales } = chart;
+      if (!chartArea) return;
+      const xMid = scales.x.getPixelForValue(repairAvg);
+      const yMid = scales.y.getPixelForValue(fuelRateAvg);
+      ctx.save();
+      ctx.fillStyle = 'rgba(239,68,68,0.08)';
+      ctx.fillRect(xMid, yMid, chartArea.right - xMid, chartArea.bottom - yMid);
+      ctx.fillStyle = 'rgba(16,185,129,0.08)';
+      ctx.fillRect(chartArea.left, chartArea.top, xMid - chartArea.left, yMid - chartArea.top);
+      ctx.restore();
+    },
+  };
+}
+// Dashed average/target reference lines (vertical = avg repair cost of the
+// routes currently shown, horizontal = avg of each route's own Target Fuel
+// Rate) plus their value labels along the chart edges.
+function z2QuadrantRefLinesPlugin(repairAvg, fuelRateAvg) {
+  return {
+    id: 'z2QuadrantRefLines',
+    afterDraw(chart) {
+      const { ctx, chartArea, scales } = chart;
+      if (!chartArea) return;
+      const xPix = scales.x.getPixelForValue(repairAvg);
+      const yPix = scales.y.getPixelForValue(fuelRateAvg);
+      ctx.save();
+      ctx.strokeStyle = '#898781'; ctx.setLineDash([5, 5]); ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(xPix, chartArea.top); ctx.lineTo(xPix, chartArea.bottom); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(chartArea.left, yPix); ctx.lineTo(chartArea.right, yPix); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = '600 10.5px Prompt, sans-serif'; ctx.fillStyle = '#52514e';
+      ctx.textAlign = 'center';
+      ctx.fillText(`ค่าเฉลี่ยค่าซ่อม ฿${fmt(repairAvg)}`, xPix, chartArea.top - 2);
+      ctx.textAlign = 'left';
+      ctx.fillText(`เป้าเฉลี่ย ${fmt(fuelRateAvg, 2)} กม./ล.`, chartArea.left + 4, yPix - 6);
+      ctx.restore();
+    },
+  };
+}
+// Zone labels drawn once in the corners of the two shaded quadrants.
+const z2QuadrantZoneLabelsPlugin = {
+  id: 'z2QuadrantZoneLabels',
+  afterDraw(chart) {
+    const { ctx, chartArea } = chart;
+    if (!chartArea) return;
+    ctx.save();
+    ctx.font = '700 12px Prompt, sans-serif';
+    ctx.fillStyle = '#b91c1c'; ctx.textAlign = 'right';
+    ctx.fillText('🔴 โซนต้องปรับปรุง/วิกฤต', chartArea.right - 8, chartArea.bottom - 10);
+    ctx.fillStyle = '#047857'; ctx.textAlign = 'left';
+    ctx.fillText('🟢 โซนประสิทธิภาพสูง', chartArea.left + 8, chartArea.top + 16);
+    ctx.restore();
+  },
+};
+// Always-on Route ID labels beside each bubble (no hover needed).
+const z2RouteLabelsPlugin = {
+  id: 'z2RouteLabels',
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    ctx.save();
+    ctx.font = '600 10.5px Prompt, sans-serif';
+    ctx.fillStyle = '#334155';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    chart.data.datasets.forEach((ds, dsIdx) => {
+      const meta = chart.getDatasetMeta(dsIdx);
+      meta.data.forEach((point, i) => {
+        const d = ds.data[i];
+        ctx.fillText(d.routeId, point.x + point.options.radius + 4, point.y);
+      });
+    });
+    ctx.restore();
+  },
+};
 function renderScatter(rowData, c) {
   destroyChart('scatter');
   document.getElementById('z2BadgeScatter').textContent = `${rowData.length} เส้นทาง`;
   const bus = [...new Set(rowData.map(r => r.bu))];
   const bubbleColors = [Z2_COLORS.blue, Z2_COLORS.coral, Z2_COLORS.emerald, Z2_COLORS.indigo];
   const maxLiters = Math.max(1, ...rowData.map(r => r.liters));
+  // Reference lines/quadrants: X = avg repair cost of the routes currently
+  // shown (reacts to the BU/range filters automatically); Y = avg of each
+  // route's own Target Fuel Rate (routes can have different targets, so
+  // this isn't a single hardcoded number like 3.70).
+  const repairAvg = avg(rowData.map(r => r.repair));
+  const targetFuelRates = rowData.map(r => r.targetFuelRate).filter(v => v !== null && v !== undefined && v > 0);
+  const fuelRateAvg = targetFuelRates.length ? avg(targetFuelRates) : avg(rowData.map(r => r.fuelRate));
   CHARTS.scatter = new Chart(document.getElementById('scatterChart'), {
     type: 'bubble',
     data: { datasets: bus.map((bu, i) => ({
       label: bu,
       data: rowData.filter(r => r.bu === bu).map(r => ({ x: r.repair, y: r.fuelRate, r: 4 + 14 * Math.sqrt(r.liters / maxLiters), routeId: r.routeId, vehicle: r.vehicle })),
-      backgroundColor: color_mix_alpha(bubbleColors[i % bubbleColors.length], 0.45),
+      backgroundColor: color_mix_alpha(bubbleColors[i % bubbleColors.length], 0.70),
       borderColor: bubbleColors[i % bubbleColors.length], borderWidth: 1.5,
       z2Label: (dp) => { const d = dp.raw; return `ค่าซ่อม ฿${fmt(d.x)} · ${fmt(d.y, 2)} กม./ล.`; },
     })) },
     options: {
       responsive: true, maintainAspectRatio: false,
+      layout: { padding: { right: 60, top: 12 } },
       scales: {
         x: { title: { display: true, text: 'ค่าซ่อม (฿)', color: c.muted }, ticks: { color: c.muted }, grid: z2GridStyle(c) },
         y: { title: { display: true, text: 'อัตราการใช้น้ำมัน (กม./ล.)', color: c.muted }, ticks: { color: c.muted }, grid: z2GridStyle(c) },
@@ -1637,28 +1731,69 @@ function renderScatter(rowData, c) {
         },
       },
     },
+    plugins: [
+      z2QuadrantShadingPlugin(repairAvg, fuelRateAvg),
+      z2QuadrantZoneLabelsPlugin,
+      z2RouteLabelsPlugin,
+      z2QuadrantRefLinesPlugin(repairAvg, fuelRateAvg),
+    ],
   });
 }
-function renderTrips(rowData, c) {
+// Palette used to color trips-chart bars by vehicle (cycled by a simple
+// string hash so the same vehicle plate always lands on the same color
+// within one render, without needing a fixed vehicle->color registry).
+const TRIPS_VEHICLE_PALETTE = ['#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#fb7185', '#8b5cf6', '#14b8a6', '#2563eb'];
+function tripsVehicleColor(vehicle) {
+  let h = 0;
+  for (let i = 0; i < vehicle.length; i++) h = (h * 31 + vehicle.charCodeAt(i)) >>> 0;
+  return TRIPS_VEHICLE_PALETTE[h % TRIPS_VEHICLE_PALETTE.length];
+}
+// Value-label plugin for the trips chart: plain integer centered just
+// above each vertical bar (trip counts are small whole numbers, so no
+// M/k abbreviation is needed here).
+const tripsValueLabelsPlugin = {
+  id: 'tripsValueLabels',
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    const meta = chart.getDatasetMeta(0);
+    const data = chart.data.datasets[0].data;
+    ctx.save();
+    ctx.font = '600 11px Prompt, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#334155';
+    meta.data.forEach((bar, i) => { ctx.fillText(String(data[i]), bar.x, bar.y - 8); });
+    ctx.restore();
+  },
+};
+function renderTrips(curRows, c) {
   destroyChart('tripsChart');
-  const sorted = rowData.filter(r => r.trips > 0).sort((a, b) => b.trips - a.trips);
-  document.getElementById('z2BadgeTrips').textContent = sorted.length ? `สูงสุด: ${sorted[0].routeId}` : '-';
-  const labels = sorted.map(r => r.routeId);
-  const data = sorted.map(r => r.trips);
+  // Group by Route ID + รถ (not just Route ID) so a route that used more
+  // than one vehicle within the selected range shows as separate bars —
+  // summed across every month in the range, same as the rest of Zone 2/3.
+  const groups = {};
+  curRows.forEach(r => {
+    const key = r.routeId + '||' + r.vehicle;
+    if (!groups[key]) groups[key] = { routeId: r.routeId, vehicle: r.vehicle, trips: 0 };
+    groups[key].trips += r.trips;
+  });
+  const bars = Object.values(groups).filter(b => b.trips > 0).sort((a, b) => b.trips - a.trips);
+  document.getElementById('z2BadgeTrips').textContent = bars.length ? `สูงสุด: ${bars[0].routeId} (${bars[0].vehicle})` : '-';
+  const labels = bars.map(b => [b.routeId, b.vehicle]);
+  const data = bars.map(b => b.trips);
   CHARTS.tripsChart = new Chart(document.getElementById('tripsChart'), {
     type: 'bar',
     data: { labels, datasets: [{
       label: 'จำนวนเที่ยววิ่ง', data, borderRadius: 8, borderSkipped: false, barPercentage: 0.7, categoryPercentage: 0.75,
-      backgroundColor: (ctx) => { const { chartArea } = ctx.chart; if (!chartArea) return Z2_COLORS.indigo;
-        const g = ctx.chart.ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
-        g.addColorStop(0, Z2_COLORS.indigo); g.addColorStop(1, Z2_COLORS.cyan); return g; },
+      backgroundColor: bars.map(b => tripsVehicleColor(b.vehicle)),
       z2Label: (dp) => `${fmt(dp.raw)} เที่ยว`,
     }] },
     options: {
       responsive: true, maintainAspectRatio: false,
-      scales: { x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 12 } } }, y: { grid: z2GridStyle(c), ticks: { color: c.muted, font: { size: 12 } }, border: { display: false } } },
+      layout: { padding: { top: 22 } },
+      scales: { x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } }, y: { grid: z2GridStyle(c), ticks: { color: c.muted, font: { size: 12 } }, border: { display: false } } },
       plugins: { legend: { display: false }, tooltip: { enabled: false, external: z2ExternalTooltip } },
     },
+    plugins: [tripsValueLabelsPlugin],
   });
 }
 // Top 5 routes by sales liters / gross profit, totaled across the whole
@@ -1666,10 +1801,10 @@ function renderTrips(rowData, c) {
 // rowData for Zone 3's table — not a per-month breakdown), respecting the
 // current BU filter (rowData is already filtered to it upstream).
 function renderTop5(rowData, c) {
-  renderTop5Chart('top5Liters', rowData, c, 'liters', Z2_COLORS.cyan, (v) => `${fmt(v)} ลิตร`, (v) => (v / 1000) + 'k');
-  renderTop5Chart('top5GP', rowData, c, 'gp', Z2_COLORS.emerald, (v) => `฿${fmt(v)}`, (v) => '฿' + (v / 1000) + 'k');
+  renderTop5Chart('top5Liters', rowData, c, 'liters', Z2_COLORS.cyan, (v) => fmtAbbrevMK(v) + ' ลิตร');
+  renderTop5Chart('top5GP', rowData, c, 'gp', Z2_COLORS.emerald, (v) => fmtAbbrevMK(v, '฿'));
 }
-function renderTop5Chart(canvasId, rowData, c, field, color, tooltipFmt, axisFmt) {
+function renderTop5Chart(canvasId, rowData, c, field, color, tooltipFmt) {
   destroyChart(canvasId);
   const top5 = [...rowData].sort((a, b) => b[field] - a[field]).slice(0, 5);
   const labels = top5.map(r => r.routeId);
@@ -1685,12 +1820,14 @@ function renderTop5Chart(canvasId, rowData, c, field, color, tooltipFmt, axisFmt
     }] },
     options: {
       indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      layout: { padding: { right: 38 } },
       scales: {
-        x: { grid: z2GridStyle(c), ticks: { color: c.muted, font: { size: 11 }, callback: axisFmt } },
+        x: { grid: z2GridStyle(c), ticks: { color: c.muted, font: { size: 11 }, callback: (v) => fmtAbbrevMK(v) } },
         y: { grid: { display: false }, ticks: { color: c.textSecondary, font: { size: 12, weight: '600' } } },
       },
       plugins: { legend: { display: false }, tooltip: { enabled: false, external: z2ExternalTooltip } },
     },
+    plugins: [top5ValueLabelsPlugin((v) => fmtAbbrevMK(v))],
   });
 }
 // Background reference-zone plugin for the fuel-diff chart: one shaded
@@ -1839,6 +1976,50 @@ function z2ValueLabelsPlugin(labelFn, color) {
 // Abbreviated "Nk" formatting shared by the trend charts' axis ticks and
 // their on-point value labels, so both read consistently (e.g. "139.8k").
 function z2FmtK(v, prefix = '') { return prefix + (Math.round(v / 10000) / 100) + 'M'; }
+// Abbreviated number formatting used by the Top 5 charts (axis ticks, data
+// labels, tooltips): >= 1,000,000 -> "N.NNM" (2dp, one trailing zero
+// trimmed, e.g. 1,253,283 -> "1.25M", 1,000,000 -> "1.0M"); >= 1,000 ->
+// "Nk" (rounded, no decimals, e.g. 551,000 -> "551k", 80,000 -> "80k");
+// below that, the plain rounded number.
+function fmtAbbrevMK(v, prefix = '') {
+  const abs = Math.abs(v);
+  if (abs >= 1e6) {
+    let s = (v / 1e6).toFixed(2);
+    if (s.endsWith('0')) s = s.slice(0, -1);
+    return prefix + s + 'M';
+  }
+  if (abs >= 1000) return prefix + Math.round(v / 1000) + 'k';
+  return prefix + Math.round(v);
+}
+// Data-label plugin for the Top 5 horizontal bar charts: draws the
+// abbreviated value at the open end of each bar (just past the bar for a
+// long bar, or inside near the tip in white if there isn't room — same
+// anti-clip logic as the fuel-diff chart's value labels).
+function top5ValueLabelsPlugin(fmtFn) {
+  return {
+    id: 'top5ValueLabels_' + Math.random().toString(36).slice(2),
+    afterDatasetsDraw(chart) {
+      const { ctx, chartArea } = chart;
+      if (!chartArea) return;
+      const meta = chart.getDatasetMeta(0);
+      const data = chart.data.datasets[0].data;
+      ctx.save();
+      ctx.font = '600 11.5px Prompt, sans-serif';
+      ctx.textBaseline = 'middle';
+      meta.data.forEach((bar, i) => {
+        const label = fmtFn(data[i]);
+        const textWidth = ctx.measureText(label).width;
+        const spaceRight = chartArea.right - bar.x;
+        const fitsOutside = spaceRight > textWidth + 10;
+        ctx.fillStyle = fitsOutside ? '#334155' : '#ffffff';
+        ctx.textAlign = fitsOutside ? 'left' : 'right';
+        const xPos = fitsOutside ? bar.x + 8 : bar.x - 8;
+        ctx.fillText(label, xPos, bar.y);
+      });
+      ctx.restore();
+    },
+  };
+}
 function renderTrend(toYm, bu, c) {
   // Always trailing 12 months ending at the latest month of the selected
   // range (toYm), regardless of how long the selected range itself is.
