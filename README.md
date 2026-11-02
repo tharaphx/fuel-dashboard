@@ -1,69 +1,2602 @@
-# Fuel Ops Dashboard
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fuel Ops Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --page-plane:      #f2f1ec;
+    --surface-1:       #fcfcfb;
+    --surface-2:       #f2f1ec;
+    --border:          #e1e0d9;
+    --baseline:        #cfcec6;
+    --grid-line:       #e1e0d9;
 
-Interactive dashboard เดี่ยวไฟล์เดียว (`index.html`) เชื่อมข้อมูลสดจาก Google Sheet ที่ให้มา ไม่ต้อง build ใดๆ
+    --text-primary:    #0b0b0b;
+    --text-secondary:  #52514e;
+    --text-muted:      #898781;
 
-## วิธีนำไปใช้บน GitHub Pages
+    --good:            #0ca30c;
+    --delta-good:      #0ca30c;
+    --warning:         #fab219;
+    --serious:         #ec835a;
+    --critical:        #d03b3b;
 
-1. สร้าง repository ใหม่บน GitHub (public หรือ private ก็ได้ ถ้าจะใช้ GitHub Pages ฟรีต้องเป็น public หรือมี GitHub Pro สำหรับ private)
-2. อัปโหลดไฟล์ `index.html` ไว้ที่ root ของ repo
-3. ไปที่ Settings → Pages → เลือก branch (เช่น `main`) และ folder `/ (root)` แล้วกด Save
-4. รอสักครู่ จะได้ลิงก์ประมาณ `https://<username>.github.io/<repo>/`
+    --series-1: #2a78d6; /* blue */
+    --series-2: #eb6834; /* orange */
+    --series-3: #1baf7a; /* aqua */
+    --series-4: #c9a30a; /* amber */
+    --series-5: #8a6dd6; /* violet */
+    --series-6: #4a5568; /* slate */
+    --series-7: #d64a8a; /* pink */
+  }
+  :root[data-theme="dark"] {
+    --page-plane:      #131312;
+    --surface-1:       #1a1a19;
+    --surface-2:       #202020;
+    --border:          #2c2c2a;
+    --baseline:        #3a3a37;
+    --grid-line:       #2c2c2a;
 
-## ข้อกำหนดของ Google Sheet
+    --text-primary:    #ffffff;
+    --text-secondary:  #c3c2b7;
+    --text-muted:      #898781;
 
-- ต้องตั้งค่าการแชร์เป็น **"ทุกคนที่มีลิงก์ – ผู้ดู (Viewer)"** ไม่เช่นนั้น dashboard จะโหลดข้อมูลไม่ได้ เพราะไฟล์นี้ดึงข้อมูลตรงจาก endpoint export ของ Google Sheets แบบไม่ใช้ login
-- **แท็บหลัก (ต้องเป็นแท็บแรกของไฟล์)** โครงสร้างคอลัมน์ต้องเรียงตามลำดับนี้:
-  `BU, Year-Month, รถ, Route ID, ขายสด (Liter), ขายเชื่อ (Liter), ขายสด (THB), ขายเชื่อ (THB), ต้นทุนขาย (THB), กำไรขั้นต้น, จำนวนเที่ยววิ่ง, ระยะทาง (กม.), เติมน้ำมัน (Liter), น้ำมันขาดเกิน (Liter), อัตราการใช้น้ำมัน, ค่าซ่อม, Target Sales (Liter), Target Fuel Rate (km/L)`
-  - คอลัมน์ใหม่ๆ (`Target Sales (Liter)`, `Target Fuel Rate (km/L)`) ถูกต่อท้ายไว้ท้ายแถวเสมอ ไม่แทรกกลาง เพื่อไม่ต้องขยับตำแหน่งคอลัมน์เดิมทุกครั้งที่เพิ่มของใหม่ — ถ้าจะเพิ่มคอลัมน์อีกในอนาคต ให้ต่อท้ายเช่นกัน
-  - `Target Fuel Rate (km/L)` คือเป้าหมาย "อัตราการใช้น้ำมันต่อคัน/เส้นทาง" ซึ่ง**แตกต่างกันได้ในแต่ละแถว** ถ้าปล่อยว่าง แถวนั้นจะแสดงเป็น "ไม่มีเป้า"
-- คอลัมน์ `Year-Month` ต้องเป็นรูปแบบ `YYYY-MM` เช่น `2026-05` เพื่อให้ dashboard เทียบเดือนเดียวกันของปีก่อนได้ถูกต้อง
-- **แท็บ "Targets"** (คอลัมน์: `BU, Target Cash %`) — เก็บเป้าสัดส่วนเงินสดต่อ BU
-- **แท็บ "Config"** (คอลัมน์: `Key, Value`) — เก็บค่านโยบายที่ปรับเปลี่ยนได้บ่อยๆ โดยไม่ต้องแก้โค้ด ปัจจุบันมีแถวเดียว: `FuelDiffTolerancePct` = ค่า ± ที่ยอมรับได้ของ "น้ำมันขาด/เกิน (%)" (ค่าเริ่มต้นถ้าไม่กรอกคือ 0.5 หมายถึง ±0.50%)
-- **แท็บ "ซ่อมบำรุง"** (คอลัมน์: `BU, Year-Month, รถ, รายการซ่อม, ค่าใช้จ่าย, ศูนย์ซ่อม, ประเภทงาน`) — รายการซ่อมย่อยของ Zone 4 (Route ID ในโซนนี้อ้างอิงข้ามมาจากแท็บหลักโดยจับคู่ BU+Year-Month+รถ)
-  - คอลัมน์ `ประเภทงาน` (คอลัมน์ที่ 7 ต่อท้าย) ใช้ค่าใดค่าหนึ่งใน 7 ประเภท: `PM ตามระยะ`, `ซ่อมเสีย (Breakdown)`, `เปลี่ยนอะไหล่`, `ตรวจสภาพประจำปี`, `ตรวจถังบรรทุก/สอบเทียบมิเตอร์`, `งานยาง`, `อื่นๆ` — พิมพ์ให้มีคำสำคัญตรงตามนี้ (เช่นมีคำว่า "ยาง" หรือ "อะไหล่" อยู่ในข้อความ) dashboard จะจับคู่แบบยืดหยุ่น ไม่ต้องพิมพ์ตรงตัวเป๊ะ ถ้าเว้นว่างจะแสดงเป็น "ไม่ระบุ" และถ้าพิมพ์คำอื่นที่ไม่ตรงกับ 7 ประเภทนี้เลย ระบบจะยังคงแสดงเป็นประเภทของตัวเอง (ไม่ทิ้งข้อมูล) แต่จะไม่มีสีที่ตั้งใจไว้ล่วงหน้า
-- ถ้าจะเปลี่ยนไปใช้ Google Sheet คนละไฟล์ ให้แก้ค่า `SHEET_ID` ที่ต้นไฟล์ `index.html` (บรรทัดแรกๆ ใน `<script>`) เป็น ID ของชีตใหม่ (ส่วนที่อยู่ระหว่าง `/d/` กับ `/edit` ใน URL)
+    --good:            #0ca30c;
+    --delta-good:      #35d035;
+    --warning:         #fab219;
+    --serious:         #ec835a;
+    --critical:        #e66767;
 
-## ฟีเจอร์หลัก
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #d6b23a;
+    --series-5: #a68df0;
+    --series-6: #8590a3;
+    --series-7: #e56aa0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page-plane:      #131312;
+      --surface-1:       #1a1a19;
+      --surface-2:       #202020;
+      --border:          #2c2c2a;
+      --baseline:        #3a3a37;
+      --grid-line:       #2c2c2a;
+      --text-primary:    #ffffff;
+      --text-secondary:  #c3c2b7;
+      --text-muted:      #898781;
+      --good:            #0ca30c;
+      --delta-good:      #35d035;
+      --warning:         #fab219;
+      --serious:         #ec835a;
+      --critical:        #e66767;
+      --series-1: #3987e5;
+      --series-2: #d95926;
+      --series-3: #199e70;
+      --series-4: #d6b23a;
+      --series-5: #a68df0;
+      --series-6: #8590a3;
+      --series-7: #e56aa0;
+    }
+  }
 
-- แท็บเมนูด้านบนสุด (อยู่แถวเดียวกับแถบตัวกรองด้านล่าง) มี 4 แท็บ: ZONE 1 (รวม ZONE 2 เข้ามาอยู่ในหน้าเดียวกัน ใต้ KPI Cards — ไม่มีแท็บแยกของ ZONE 2 แล้ว), ZONE 3, ZONE 4, ZONE 5 — คลิกเพื่อสลับดูทีละโซน ไม่ต้องเลื่อนจอยาว ข้อมูลของทุกโซนยังคำนวณอยู่เบื้องหลังตลอด แค่ซ่อนโซนที่ไม่ได้เลือกไว้เฉยๆ
-- ตัวกรองเวลาเปลี่ยนจาก "เดือน-ปี แบบเลือกเดือนเดียว" เป็น **"ตัวกรองช่วงเดือน (Date Range Filter)"**: Dropdown "ช่วงเวลา" มีตัวเลือกสำเร็จรูป — เดือนล่าสุด, Q1–Q4 (อิงปีของเดือนล่าสุดที่มีข้อมูลในชีต ไม่ใช่ปีปัจจุบันของเครื่อง), YTD (ม.ค. ถึงเดือนล่าสุด) — และ "กำหนดเอง..." ซึ่งจะโผล่ช่อง "จากเดือน"/"ถึงเดือน" ให้เลือกช่วงเองแบบอิสระ มี "range pill" สรุปช่วงที่เลือกอยู่และจำนวนเดือนให้เห็นชัดเจนตลอด (เช่น "ก.ค. 69 - ก.ย. 69 (3 เดือน)") ร่วมกับตัวเลือก "หน่วยธุรกิจ (BU)" — ทั้งหมดนี้กรองข้อมูลทั้งหน้าแบบเรียลไทม์ ใช้ร่วมกันทุกโซน ไม่ต้องตั้งค่าใหม่เวลาสลับแท็บ และไม่มีช่องค้นหาแบบพิมพ์อิสระ
-- แถบตัวกรองอีกแถวหนึ่งจะโผล่ขึ้นมาใต้แถบตัวกรองหลัก **เฉพาะตอนเปิดแท็บ ZONE 4** — มีแค่ 3 Dropdown: "รถ (ทะเบียน)", "ประเภทงาน", "ศูนย์ซ่อม" (ไม่มีช่องค้นหาแบบพิมพ์อิสระแล้วเช่นกัน) — ทั้งสามตัวนี้กรองทั้ง KPI การ์ด/กราฟ/Donut ของ Zone 4 แบบเต็มรูปแบบ (ดูรายละเอียดในหัวข้อ Zone 4 ด้านล่าง)
-- ช่วงเดือนที่เลือกจะเทียบกับ**ยอดรวมของช่วงเดียวกันในปีก่อนหน้า** โดยอัตโนมัติเสมอ (ไม่ใช่เทียบทีละเดือน) เช่นเลือกช่วง ก.ค.–ก.ย. 2569 จะเทียบกับยอดรวม ก.ค.–ก.ย. 2568 — การ์ด "ค่าซ่อมบำรุงรวม" (การ์ดที่ 6) เป็นข้อยกเว้น: เทียบกับ **"ช่วงก่อนหน้าที่มีความยาวเท่ากัน"** (period-over-period) แทน YoY เพราะค่าซ่อมผันผวนสูงและ "เดือนก่อน" ไม่มีความหมายชัดเจนอีกต่อไปเมื่อตัวกรองเป็นช่วงที่ยาวได้หลายเดือน
-- กราฟ/บล็อกที่แต่ก่อนตรึงไว้ที่ "ย้อนหลัง 12 เดือนจากเดือนที่เลือก" หรือ "ม.ค. ถึงเดือนที่เลือก" เปลี่ยนมาแสดง**เฉพาะเดือนที่อยู่ในช่วงที่เลือกเท่านั้น** ได้แก่ sparkline 12 เดือนของ Zone 1 ทุกการ์ด และบล็อก "ค่าซ่อมสะสม" ของ Zone 4 — เลือกช่วงเดือนเดียวก็จะเห็นจุดเดียว เลือกช่วงยาวก็จะเห็นทุกเดือนในช่วงนั้น (ข้อยกเว้น: กราฟแนวโน้มยอดขาย/กำไรขั้นต้นของ Zone 2 ยังคงตรึงที่ "ย้อนหลัง 12 เดือนเสมอ" — ดูหัวข้อ Zone 2 ด้านล่าง)
-- Zone 5 (จุดที่ควรเฝ้าระวัง) ตรวจจับปัญหาจาก**ยอดรวมทั้งช่วงต่อเส้นทาง**ก่อน แล้วตรวจกฎทุกข้อ "ครั้งเดียว" ต่อเส้นทาง (ไม่ใช่ตรวจทีละเดือนแล้วรวมผล) เช่นเลือกช่วง 3 เดือน ระบบจะรวมยอดขาย/ค่าซ่อม/น้ำมันของ 3 เดือนนั้นต่อเส้นทางก่อน แล้วค่อยเทียบกับเกณฑ์
-- ปุ่ม "รีเฟรช" ดึงข้อมูลใหม่จาก Google Sheet ทันทีโดยไม่ต้อง reload หน้า, ปุ่ม "ธีม" สลับโหมดสว่าง/มืด
-- หน้าทั้งหมดใช้ความกว้าง (`main` max-width) 1600px และขนาดตัวอักษรขยายขึ้น ~12% จากค่าเดิมทุกจุด (หัวข้อ, ตัวเลข KPI, ตาราง, label ฯลฯ) เพื่อให้อ่านง่ายขึ้นบนจอกว้าง
-- Zone 1: Quick Executive Alert Bar ด้านบนสุด — สรุปประเด็นที่ต้องโฟกัสในเดือนนี้อัตโนมัติ สูงสุด 3 บรรทัด จาก 2 สัญญาณที่ dashboard คำนวณอยู่แล้ว: (1) จำนวนเส้นทางที่ติดรายการเฝ้าระวังใน Zone 5 เดือนนี้ (2) รถที่มีค่าซ่อมสูงสุดเดือนนี้ ถ้าเกิน ฿10,000 (เกณฑ์เดียวกับ badge ที่ใช้ใน Zone 3/4) — ถ้าไม่มีทั้งสองอย่างจะโชว์แถบสีเขียว "ไม่มีประเด็นสำคัญที่ต้องเฝ้าระวังเป็นพิเศษในเดือนนี้" แทน (ไม่ซ่อนแถบไปเลย)
-- Zone 1: KPI ภาพรวม 6 การ์ด
-  - ยอดขายรวม (ลิตร) — พร้อม %YoY และ % ของเป้า (จากคอลัมน์ `Target Sales (Liter)`) พร้อม sparkline 12 เดือน
-  - กำไรขั้นต้นรวม — sparkline สีเขียวพร้อม area gradient ใต้เส้น
-  - น้ำมันขาด/เกินเทียบเป้า ±ค่าที่ตั้งในแท็บ Config
-  - อัตราการใช้น้ำมันเฉลี่ย — พร้อม sparkline 12 เดือน
-  - สัดส่วนเงินสด-เงินเชื่อเทียบเป้า
-  - ค่าซ่อมบำรุงรวม (การ์ดที่ 6) — ยอดค่าซ่อมรวมของช่วงที่เลือก (ตัวเลขเดียวกับ Zone 3/4) พร้อม % เทียบ "ช่วงก่อนหน้าที่มีความยาวเท่ากัน" (period-over-period แทน YoY เพราะค่าซ่อมผันผวนสูง และ "เดือนก่อน" ไม่มีความหมายชัดเจนอีกต่อไปเมื่อตัวกรองเป็นช่วงหลายเดือนได้) และ sparkline ของเดือนในช่วงที่เลือก
-- Zone 2 (รวมอยู่ในหน้า Zone 1 ใต้ KPI Cards แล้ว ไม่มีแท็บของตัวเอง): กราฟเจาะลึกที่ตารางแทนไม่ได้ (scatter ค่าซ่อม vs อัตราการใช้น้ำมัน, จำนวนเที่ยววิ่งรายเส้นทาง, น้ำมันขาด/เกินรายเส้นทาง, แนวโน้มยอดขาย/กำไร 12 เดือน) — ดีไซน์ "Modern Vibrant" ตั้งใจให้สดใส/มีสีสันเด่นกว่าโซนอื่นของหน้า (เป็น "accent zone" เฉพาะโซนนี้ ส่วนโซนอื่นยังคงสไตล์ low-noise/สีนุ่มเดิม):
-  - **Top 5 เส้นทาง — ยอดขาย (ลิตร) / กำไรขั้นต้น** (2 กราฟแท่งแนวนอน อยู่ด้านบนสุดของโซนนี้ ก่อนกราฟแนวโน้ม 12 เดือน): รวมยอดขายลิตร/กำไรขั้นต้น**ทั้งช่วงเดือนที่เลือกไว้ในตัวกรอง**ต่อเส้นทาง (ไม่ใช่รายเดือน) แล้วเรียง Top 5 มาก→น้อย ใช้ตัวกรอง BU ตัวเดียวกับแถบบนสุดของหน้า (ไม่มี Dropdown แยกของตัวเอง) ไล่เฉดสีฟ้า Cyan (ยอดขาย) / เขียวมรกต Emerald (กำไรขั้นต้น) พร้อมตัวเลขย่อชิดปลายแท่ง (ย้ายเข้าไปในแท่งเป็นตัวหนังสือขาวถ้าพื้นที่ไม่พอ) — รูปแบบย่อ: หลักล้านลงท้าย **M** ทศนิยม 2 ตำแหน่งแบบตัดเลข 0 ส่วนเกินท้ายออก (1,253,283 → 1.25M, 1,000,000 → 1.0M), หลักพัน/หมื่น/แสนลงท้าย **k** แบบปัดเศษ (551,000 → 551k, 80,000 → 80k) ใช้รูปแบบเดียวกันทั้งแกน X, data label, และ tooltip
-  - กราฟยอดขายลิตร/กำไรขั้นต้น ย้อนหลัง 12 เดือน เป็น Area Line ไล่เฉดสี (ฟ้า Cyan / เขียวมรกต Emerald) พร้อม gradient โปร่งแสงใต้เส้น — **ตรึงที่ "ย้อนหลัง 12 เดือนเสมอ"** โดยนับถอยจากเดือนล่าสุดของช่วงที่เลือกไว้ในตัวกรอง (toYm) ไม่ขึ้นกับว่าช่วงที่เลือกยาวกี่เดือน (เช่นเลือกช่วง ก.ค.-ก.ย. 69 กราฟนี้จะโชว์ ต.ค. 68 ถึง ก.ย. 69 เสมอ)
-  - กราฟจำนวนเที่ยววิ่งแยกแท่งตาม "เส้นทาง + รถ" (ไม่ใช่แยกตามเส้นทางอย่างเดียว) — ถ้าเส้นทางเดียวกันมีรถมากกว่า 1 คันวิ่งในช่วงที่เลือก (เช่นรถเปลี่ยนกลางช่วง) จะเห็นเป็นคนละแท่ง สีของแท่งไล่ตามรถคันนั้นๆ (ไม่ใช่ไล่สี Indigo→Cyan แบบเดิมอีกต่อไป) แกน X โชว์ทั้ง Route ID และทะเบียนรถ 2 บรรทัด พร้อมตัวเลขจำนวนเที่ยวจริงอยู่เหนือแท่งเสมอไม่ต้อง hover
-  - กราฟน้ำมันขาด/เกิน (%) รายเส้นทาง — แถบเกณฑ์ปกติ ±FuelDiffTolerancePct เป็นพื้นหลังแรเงาแผ่นเดียว (ไม่ใช่แท่งแยก), สเกลแกน X คงที่ -1.0% ถึง +0.6% ให้มี whitespace ไม่ชนขอบ, สีแท่งตามระดับความรุนแรง (หลุดเกณฑ์ = แดง Coral พร้อม ⚠️, ติดลบในเกณฑ์ = ฟ้าอ่อนโปร่งแสง, เกิน = เขียวมรกต), ตัวเลข % จริงชิดปลายแท่งแต่ละเส้นทาง, แถวกระชับขึ้น
-  - กราฟ Scatter (ค่าซ่อม vs อัตราการใช้น้ำมัน) เปลี่ยนเป็น **Quadrant Analysis**: ยังเป็น Bubble ขนาดวงตามปริมาณลิตร แยกสีตาม BU (ความทึบเพิ่มเป็น 70% เพื่อลดการบดบัง) แต่เพิ่มเส้นประอ้างอิง 2 เส้น — แนวตั้ง = ค่าเฉลี่ยค่าซ่อมของเส้นทางที่แสดงอยู่ในกราฟตอนนั้น (ปรับตามตัวกรอง BU/ช่วงเวลาอัตโนมัติ), แนวนอน = ค่าเฉลี่ยของ "Target Fuel Rate" รายเส้นทาง (ไม่ใช่เลขคงที่ เพราะแต่ละเส้นทางมีเป้าต่างกันได้) — แรเงาพื้นหลัง 2 โซนตามเส้นอ้างอิง: มุมขวาล่าง (ค่าซ่อมสูง + อัตราการใช้น้ำมันต่ำกว่าเป้า) สีแดงจาง พร้อมป้าย "🔴 โซนต้องปรับปรุง/วิกฤต", มุมซ้ายบน (ค่าซ่อมต่ำ + อัตราดีกว่าเป้า) สีเขียวจาง พร้อมป้าย "🟢 โซนประสิทธิภาพสูง" (อีก 2 มุมไม่แรเงา) — และมี Label ชื่อ Route ID ติดข้างลูกบอลทุกลูกตลอด ไม่ต้อง hover
-  - การ์ดกราฟทุกใบมีมุมโค้ง เงานุ่ม (เงาเข้มขึ้นตอน hover) และ badge เล็กมุมขวาบนแสดงค่าสรุปสำคัญของกราฟนั้น (เช่น เส้นทางที่วิ่งมากสุด, เดือนที่ยอดขายสูงสุด) เส้น gridline เป็นเส้นประสีเทาจางๆ
-  - Custom Tooltip แบบ Glassmorphism (พื้นหลังเบลอโปร่งแสง) เวลา hover บนกราฟ
-  - ใช้ฟอนต์ Prompt (โหลดจาก Google Fonts) ซึ่งปรับใช้กับทั้งหน้าเว็บ (ไม่ใช่แค่โซนนี้) เนื่องจากก่อนหน้านี้ยังไม่มีการโหลดฟอนต์ไทยแบบไร้หัวเลย
-  - กราฟยอดขายลิตร/กำไรขั้นต้น ตอนนี้แสดง**เฉพาะเดือนที่อยู่ในช่วงเดือนที่เลือกไว้ในตัวกรอง** (ไม่ใช่ย้อนหลัง 12 เดือนตรึงตายตัวแบบเดิม) ปรับเพิ่มเติม: แกน Y ไม่บังคับเริ่มที่ 0 แต่คำนวณช่วงจากค่าสูงสุด/ต่ำสุดจริงของเดือนในช่วงนั้นแล้วเผื่อขอบ ±15% ของช่วง (เพื่อให้เห็นความผันผวนจริงชัดขึ้นโดยไม่ดูเกินจริงหรือถูกบี้แบน), มี marker เฉพาะเดือนที่มียอดสูงสุด (จุดทึบ) และเดือนล่าสุดในช่วง (จุดขอบหนา) ส่วนเดือนอื่นไม่โชว์จุดเพื่อลดความรก, มีแถบไฮไลท์สีส้มจางแนวตั้งในเดือนที่ YoY ตกเกิน 15% — ใช้เกณฑ์เดียวกับ Zone 5 "ยอดขายหดตัวจากปีก่อน" เป๊ะๆ เพียงแต่คำนวณจากยอดรวมทั้งกองรถของเดือนนั้นเทียบกับเดือนเดียวกันปีก่อน (ไม่ใช่รายเส้นทางแบบ Zone 5 และไม่ใช่ยอดรวมทั้งช่วง — เป็นการตรวจต่อเดือนภายในช่วงที่แสดงอยู่) และโชว์ตัวเลขแบบย่อหลักล้าน (เช่น "0.14M" / "฿0.4M") เหนือจุดข้อมูลทุกเดือนตลอดเส้น ไม่ต้อง hover ก็เห็นตัวเลขได้เลย (แกน Y ก็ใช้หน่วยเดียวกัน)
-- Zone 3: ตารางประสิทธิภาพรายเส้นทาง (Route ID) 5 คอลัมน์ ออกแบบแบบ "low-noise" — ตัวเลขหลักเป็นตัวหนาสีเข้ม (Primary Metric) ส่วนข้อความรองเป็นตัวเล็กสีเทา/สีความหมาย (Secondary) แถวมี padding กว้างขึ้นเพื่อเพิ่ม whitespace ได้แก่ Route ID, ยอดขาย & ผลต่างน้ำมัน (ยอดขายลิตรตัวหนา + น้ำมันขาด/เกิน: ข้อความสีเขียว/ส้มสำหรับในเกณฑ์/เฝ้าระวัง, badge แดงเข้ม ⚠️ เฉพาะระดับวิกฤต — พร้อม %YoY และ %เทียบเป้าด้านล่างเป็นข้อความสีความหมาย), ผลประกอบการกำไร (กำไรขั้นต้นรวมตัวหนาเป็น Primary + บรรทัดรองแสดงเฉพาะ "กำไร ฿X/ล." — hover ที่บรรทัดรองเพื่อดูราคาขาย/ต้นทุนต่อลิตรใน tooltip), ค่าซ่อม & ประสิทธิภาพน้ำมัน (ยอดค่าซ่อมตัวหนา, เกิน ฿10,000 ขึ้นเป็นข้อความตัวหนาสีแดง ⚠️ ไม่มีพื้น pill ทึบ + อัตราสิ้นเปลืองเทียบเป้าเป็นข้อความสีความหมาย), เงินสด:เงินเชื่อ (เทียบเป้า) — แสดงสัดส่วน "% : %" ตัวหนาชิดกลาง พร้อมข้อความเทียบเป้าเล็กสีความหมายด้านล่าง (ไม่มีแท่งกราฟ) — ผลต่าง % เทียบเป้ามี sanity guard ป้องกันค่าประหลาด (เช่นข้อมูลผิดพลาดในแท็บ Targets) ไม่ให้แสดงตัวเลขที่โดดผิดปกติ เกินช่วง ±100 จุด% จะโชว์ "ไม่มีเป้า" แทน
-  - เกณฑ์ระดับ "วิกฤต" ของ badge น้ำมันขาด/เกิน คือเกิน 2 เท่าของค่า `FuelDiffTolerancePct` (แท็บ Config) ปรับได้ที่ค่าคงที่ `FUEL_DIFF_CRITICAL_MULTIPLIER` ต้นไฟล์ `index.html`
-- Zone 4: รายการซ่อมประจำเดือน — ตัวกรองเฉพาะโซนนี้ (รถ/ประเภทงาน/ศูนย์ซ่อม — ไม่มีช่องค้นหาแบบพิมพ์อิสระแล้ว) อยู่ในแถบตัวกรองที่โผล่ขึ้นมาใต้แถบหลักเมื่อเปิดแท็บนี้ (ดูหัวข้อด้านบน) จัดหน้าออกเป็น **2 ส่วนแยกกันชัดเจน** (มีหัวข้อคั่นเลขหมายกำกับ "1"/"2" พร้อมเส้นแบ่ง):
-  - **ส่วนที่ 1 — ภาพรวมตามช่วงเดือนที่เลือก (Monthly Performance & Breakdown):** ผูกกับช่วงเดือนที่เลือกไว้ในตัวกรองด้านบนเท่านั้น ประกอบด้วย KPI การ์ด 4 ใบ (ยอดรวมค่าซ่อม, จำนวนรถ, ยอดสูงสุด, จำนวนศูนย์ซ่อม — กรองตาม BU/รถ/ประเภทงาน/ศูนย์ซ่อมที่เลือกอยู่ด้วย) และกราฟแท่ง **"ค่าซ่อมประจำเดือน"** ด้านล่าง — 1 แท่งต่อเดือนในช่วงที่เลือก แบ่งสีแบบ Stacked ตามประเภทงานซ่อม (7 สีเดียวกับโดนัทในส่วนที่ 2) พร้อม Legend ประเภทงานใต้กราฟ และตารางรายการซ่อม (Accordion จัดกลุ่มตามทะเบียนรถ) — ทุกอย่างในส่วนนี้ตอบสนองตัวกรองแบบเต็มรูปแบบ
-  - **ส่วนที่ 2 — แนวโน้มค่าซ่อมสะสมประจำปี & สัดส่วนตามประเภทงานรายปี (YTD Annual Summary & Category Share):** ตั้งใจแยกออกจากตัวกรองช่วงเดือนด้านบนโดยเจตนา — สะสม**เต็มปีปฏิทินจริงเสมอ** (ม.ค. ถึงเดือนล่าสุดที่มีข้อมูลของปีนั้นในชีต ไม่ใช่แค่ถึงเดือนสุดท้ายของช่วงที่เลือก) โดยปีที่อ้างอิงคือปีของเดือนล่าสุดในช่วงที่เลือกไว้ตอนนั้น (ยังกรองตาม BU/รถ/ประเภทงาน/ศูนย์ซ่อมเหมือนเดิม มีแค่ "ช่วงเวลา" ที่ไม่ขึ้นกับตัวกรองด้านบนแล้ว) ประกอบด้วย KPI การ์ด 3 ใบ (ค่าซ่อมสะสม YTD, เดือนที่ซ่อมสูงสุด, รถที่ค่าซ่อมสูงสุดประจำปี) และแสดงคู่กัน: กราฟเส้นพื้นที่ (Area Line) แสดง**ยอดสะสมแบบวิ่งขึ้นเรื่อยๆ** ตั้งแต่ ม.ค. ถึงเดือนล่าสุดของปี กับ Donut chart สัดส่วนตามประเภทงานซ่อมรายปี (7 ประเภทตามคอลัมน์ `ประเภทงาน`) พร้อม Legend — คลิกที่ชิ้นโดนัทหรือ Legend เพื่อกรองตารางรายการซ่อมในส่วนที่ 1 เฉพาะประเภทนั้นทันที (คลิกซ้ำหรือเลือก "ทุกประเภทงาน" เพื่อยกเลิก)
-- Zone 5: จุดที่ควรเฝ้าระวัง — ดีไซน์ใหม่สไตล์ Executive Alert Feed (ตรรกะการตรวจจับปัญหาเหมือนเดิมทุกอย่าง แค่เปลี่ยนหน้าตา):
-  - แถบสรุปด้านบน (คลิกได้) แยกจำนวนตามระดับความรุนแรง 3 ระดับ: 🔴 วิกฤต / 🟠 ต้องดู / 🟡 เฝ้าระวัง
-  - ตัวกรอง Dropdown 2 อัน: กรองตามระดับความรุนแรง และกรองตามประเภทปัญหา (5 แบบ: ค่าซ่อมสูงผิดปกติ, กำไรขั้นต้น/ลิตรต่ำผิดปกติ, ยอดขายหดตัวจากปีก่อน, น้ำมันขาด/เกินนอกเป้า, อัตราการใช้น้ำมันต่ำกว่ากองรถ) พร้อมปุ่ม "ล้างตัวกรอง"
-  - แต่ละแถวจัดเป็นคอลัมน์ชัดเจน: ระดับความรุนแรง (badge), ชื่อปัญหา, เส้นทาง/รถ, ค่าที่เกิดขึ้นจริง (ตัวใหญ่สีตามความรุนแรง), เกณฑ์อ้างอิง (ตัวเล็กสีเทา), และปุ่ม Drill-down ทางขวาสุดที่พาไปโซนที่เกี่ยวข้องทันที — ค่าซ่อมสูงผิดปกติ→Zone 4, กำไรขั้นต้น/ลิตรต่ำ→Zone 3, ยอดขายหดตัว→Zone 2, น้ำมันขาด/เกิน→Zone 3, อัตราการใช้น้ำมันต่ำ→Zone 2
-  - ถ้าไม่มีรายการเฝ้าระวังเลยในเดือนนั้นจะแสดงข้อความแยกจากกรณี "ไม่พบรายการที่ตรงกับตัวกรอง"
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page-plane); color: var(--text-primary);
+    font-family: 'Prompt', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+    font-size: 18px; /* enlarged base per the "easier to read" redesign */
+  }
+  #loadingOverlay {
+    position: fixed; inset: 0; background: var(--page-plane); z-index: 50;
+    display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px;
+  }
+  .spinner { width: 34px; height: 34px; border: 3px solid var(--border); border-top-color: var(--series-1); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
-## ข้อจำกัดที่ควรทราบ
+  header {
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+    padding: 18px 28px; background: var(--surface-1); border-bottom: 1px solid var(--border);
+  }
+  header h1 { font-size: 23.5px; margin: 0; font-weight: 700; }
+  header .sub { font-size: 15px; color: var(--text-secondary); margin-top: 3px; }
+  .header-actions { display: flex; gap: 10px; align-items: center; }
+  .icon-btn {
+    background: var(--surface-2); border: 1px solid var(--border); color: var(--text-primary);
+    border-radius: 9px; padding: 9px 15px; font-size: 15.5px; cursor: pointer; font-weight: 600;
+  }
+  .icon-btn:hover { background: var(--border); }
 
-- ตัวเลือกสำเร็จรูป Q1-Q4/YTD ในตัวกรองช่วงเดือน อิงปีของ **เดือนล่าสุดที่มีข้อมูลในชีต** (ไม่ใช่ปีปัจจุบันของเครื่อง) เพื่อให้ dashboard ยังถูกต้องแม้ชีตจะอัปเดตล่าช้ากว่าวันที่ปัจจุบัน
-- สัดส่วน "เงินสด-เงินเชื่อ" คำนวณจาก **จำนวนลิตร** (ไม่ใช่จำนวนบาท)
-- ค่าซ่อมในต้นทางมีเฉพาะยอดรวมต่อคันต่อรายการ (จากแท็บ "ซ่อมบำรุง") ไม่มีวันที่ซ่อมแยกละเอียด
+  .zone-tabs {
+    display: flex; align-items: center; gap: 2px; flex-wrap: wrap;
+    padding: 0 28px; background: var(--surface-1); border-bottom: 1px solid var(--border); overflow-x: auto;
+  }
+  .zone-tab {
+    display: flex; align-items: center; gap: 8px; padding: 14px 14px; color: var(--text-secondary);
+    font-size: 15px; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap;
+  }
+  .zone-tab .dot {
+    width: 18px; height: 18px; border-radius: 5px; background: var(--page-plane); display: flex;
+    align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: var(--text-muted); flex-shrink: 0;
+  }
+  .zone-tab:hover { color: var(--text-primary); }
+  .zone-tab.active { color: var(--text-primary); border-bottom-color: var(--series-1); }
+  .zone-tab.active .dot { background: var(--series-1); color: #fff; }
+
+  .filter-bar {
+    display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+    padding: 16px 28px; background: var(--surface-1); border-bottom: 1px solid var(--border);
+  }
+  .filter-bar label { font-size: 15px; color: var(--text-secondary); margin-right: 7px; font-weight: 600; }
+  .filter-bar select, .filter-bar input {
+    background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border);
+    border-radius: 9px; padding: 9px 13px; font-size: 17px;
+  }
+  #statusMsg { font-size: 15px; color: var(--text-muted); }
+  #statusMsg.err { color: var(--critical); }
+  /* Month-range filter — replaces the old single "เดือน-ปี" dropdown. */
+  .custom-range-fields { display: none; align-items: center; gap: 20px; }
+  .custom-range-fields.show { display: flex; }
+  .range-pill {
+    display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14.5px;
+    padding: 7px 14px; border-radius: 20px; color: var(--series-1);
+    background: color-mix(in srgb, var(--series-1) 10%, transparent);
+  }
+  /* Zone 4's own filters, merged into the top filter area — hidden unless
+     Zone 4 is the active tab (switchZoneTab toggles the "active" class). */
+  .zone4-filter-bar { display: none; padding-top: 12px; padding-bottom: 12px; }
+  .zone4-filter-bar.active { display: flex; }
+
+  main { max-width: 1600px; margin: 0 auto; padding: 26px 28px 70px; }
+  .block { margin-bottom: 40px; }
+  .zone-panel { display: none; }
+  .zone-panel.active { display: block; }
+  h2.block-title {
+    font-size: 21.5px; font-weight: 700; margin: 0 0 16px; color: var(--text-primary);
+    display: flex; align-items: center; gap: 10px;
+  }
+  h2.block-title .n { color: var(--text-muted); font-weight: 500; font-size: 15px; }
+  .block-subtitle {
+    font-size: 19px; font-weight: 700; margin: 30px 0 16px; color: var(--text-primary);
+    display: flex; align-items: center; gap: 10px; padding-top: 22px; border-top: 1px solid var(--border);
+  }
+  .zone-tag {
+    font-size: 12.5px; font-weight: 700; letter-spacing: 0.04em; color: #fff;
+    background: var(--series-1); padding: 3px 9px; border-radius: 6px;
+  }
+
+  /* ---------- Zone 1 ---------- */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; }
+  .kpi-card {
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px;
+    padding: 20px 22px;
+  }
+  .kpi-label { font-size: 14.5px; color: var(--text-secondary); margin-bottom: 10px; font-weight: 600; }
+  .kpi-value { font-size: 32px; font-weight: 800; line-height: 1.1; letter-spacing: -0.01em; }
+  .kpi-value .unit { font-size: 17px; font-weight: 600; color: var(--text-secondary); margin-left: 4px; }
+  .kpi-sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+  .delta { display: inline-flex; align-items: center; gap: 5px; font-size: 14px; font-weight: 700; margin-top: 10px; padding: 3px 10px; border-radius: 20px; }
+  .delta.up { color: var(--delta-good); background: color-mix(in srgb, var(--good) 14%, transparent); }
+  .delta.down { color: var(--critical); background: color-mix(in srgb, var(--critical) 14%, transparent); }
+  .delta.flat { color: var(--text-muted); background: color-mix(in srgb, var(--text-muted) 12%, transparent); }
+  .kpi-spark { height: 38px; margin-top: 12px; }
+  .kpi-donut-wrap { display: flex; align-items: center; gap: 14px; margin-top: 8px; }
+  .kpi-donut-wrap canvas { max-width: 74px; max-height: 74px; }
+ .target-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 14px; font-weight: 700; margin-top: 8px; padding: 3px 10px; border-radius: 20px; }
+
+  .alert-bar {
+    display: flex; align-items: flex-start; gap: 12px;
+    background: color-mix(in srgb, var(--warning) 10%, var(--surface-1));
+    border: 1px solid color-mix(in srgb, var(--warning) 45%, var(--border));
+    border-radius: 12px; padding: 12px 18px; margin-bottom: 16px; font-size: 14px; color: var(--text-primary);
+  }
+  .alert-bar.ok { background: color-mix(in srgb, var(--good) 8%, var(--surface-1)); border-color: color-mix(in srgb, var(--good) 35%, var(--border)); }
+  .alert-bar .icon { font-size: 17px; line-height: 1.4; }
+  .alert-bar .lines { display: flex; flex-direction: column; gap: 4px; }
+  .alert-bar .lines .tag { font-weight: 800; color: #8a6200; margin-right: 6px; }
+  .alert-bar.ok .lines .tag { color: var(--good); }
+
+  /* ---------- Zone 5 — Executive Alert Feed ---------- */
+  .sev-summary { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .sev-pill {
+    display: flex; align-items: center; gap: 9px; background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 18px; cursor: pointer; flex: 1; min-width: 150px; transition: box-shadow .15s;
+  }
+  .sev-pill:hover { box-shadow: 0 1px 6px rgba(0,0,0,.06); }
+  .sev-pill.active { border-color: var(--text-primary); box-shadow: 0 1px 6px rgba(0,0,0,.08); }
+  .sev-pill .emoji { font-size: 23.5px; }
+  .sev-pill .count { font-size: 26px; font-weight: 800; line-height: 1; }
+  .sev-pill .lbl { font-size: 14px; color: var(--text-secondary); font-weight: 600; }
+
+  .exc-filter-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .exc-filter-row select {
+    background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border);
+    border-radius: 9px; padding: 9px 13px; font-size: 15.5px;
+  }
+  .exc-filter-row .clear-btn { font-size: 14.5px; color: var(--series-1); cursor: pointer; font-weight: 600; }
+
+  .alert-table { display: flex; flex-direction: column; gap: 10px; }
+  .alert-row {
+    display: grid; grid-template-columns: 108px 1.5fr 1.1fr 1fr 1.2fr auto;
+    align-items: center; gap: 14px;
+    background: var(--surface-1); border: 1px solid var(--border); border-left: 5px solid var(--critical);
+    border-radius: 12px; padding: 14px 18px;
+  }
+  .alert-row.serious { border-left-color: var(--serious); }
+  .alert-row.warning { border-left-color: var(--warning); }
+  .sev-badge {
+    display: inline-flex; align-items: center; gap: 5px; font-weight: 800; font-size: 14px;
+    padding: 4px 10px; border-radius: 20px; white-space: nowrap;
+    color: var(--critical); background: color-mix(in srgb, var(--critical) 15%, transparent);
+  }
+  .alert-row.serious .sev-badge { color: var(--serious); background: color-mix(in srgb, var(--serious) 18%, transparent); }
+  .alert-row.warning .sev-badge { color: #8a6200; background: color-mix(in srgb, var(--warning) 25%, transparent); }
+  .issue-title { font-weight: 700; font-size: 17px; color: var(--text-primary); }
+  .target-subject { font-size: 15px; color: var(--text-secondary); }
+  .target-subject b { color: var(--text-primary); font-weight: 700; }
+  .actual-value { font-size: 21.5px; font-weight: 800; }
+  .actual-value.critical { color: var(--critical); }
+  .actual-value.serious { color: var(--serious); }
+  .actual-value.warning { color: #8a6200; }
+  .benchmark-text { font-size: 14px; color: var(--text-muted); line-height: 1.4; }
+  .drill-btn {
+    font-size: 14.5px; font-weight: 700; color: var(--series-1); background: color-mix(in srgb, var(--series-1) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--series-1) 30%, transparent); border-radius: 8px; padding: 7px 12px; cursor: pointer; white-space: nowrap;
+  }
+  .drill-btn:hover { background: color-mix(in srgb, var(--series-1) 18%, transparent); }
+  .alert-col-header { display: grid; grid-template-columns: 108px 1.5fr 1.1fr 1fr 1.2fr auto; gap: 14px; padding: 0 18px; margin-bottom: 4px; }
+  .alert-col-header span { font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; }
+  .alert-empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 15.5px; }
+  @media (max-width: 900px) {
+    .alert-col-header { display: none; }
+    .alert-row { grid-template-columns: 1fr; gap: 8px; }
+  }
+
+  /* ---------- Zone 3: unified table ---------- */
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; padding: 10px; }
+  .full-table-wrap { overflow-x: auto; }
+  .data-table { border-collapse: collapse; width: 100%; min-width: 1150px; }
+  .data-table th {
+    text-align: left; font-size: 14.5px; color: var(--text-muted); font-weight: 700;
+    padding: 13px 18px; border-bottom: 1px solid var(--border); white-space: nowrap; cursor: pointer; user-select: none;
+  }
+  .data-table th.sorted { color: var(--text-primary); }
+  .data-table th .sort-arrow { font-size: 12.5px; margin-left: 3px; opacity: .6; }
+  .data-table td { padding: 22px 18px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .hint-underline { text-decoration: underline dotted var(--text-muted); text-decoration-thickness: 1px; cursor: help; }
+  .data-table tbody tr:hover { background: var(--page-plane); }
+  .data-table tr.flagged td:first-child { box-shadow: inset 4px 0 0 var(--critical); }
+  .veh-cell { display:flex; align-items:center; gap:8px; white-space: nowrap; }
+  .bu-badge { background: color-mix(in srgb, var(--series-1) 12%, transparent); color: var(--series-1); font-size: 13.5px; font-weight: 600; padding: 3px 9px; border-radius: 6px; }
+
+  .bar-track { position: relative; width: 130px; height: 16px; background: var(--page-plane); border-radius: 5px; overflow: visible; }
+  .bar-fill { position: absolute; left:0; top:0; height: 100%; border-radius: 5px; }
+  .bar-marker { position: absolute; top: -3px; width: 3px; height: 22px; background: var(--text-primary); opacity: .55; }
+  .bar-marker.prevyear { opacity: .45; }
+  .bar-diverging { position: relative; width: 130px; height: 16px; background: var(--page-plane); border-radius: 5px; }
+  .bar-diverging .mid-line { position:absolute; left:50%; top:-3px; width:1px; height:22px; background: var(--baseline); }
+  .bar-diverging .seg { position:absolute; top:0; height:100%; }
+  .stack-mini { position: relative; display:flex; width: 110px; height: 16px; border-radius: 5px; overflow: visible; }
+  .cell-label { font-size: 13.5px; color: var(--text-muted); margin-top: 4px; white-space: nowrap; font-weight: 500; }
+  .text-primary-strong { font-size: 20px; font-weight: 800; color: var(--text-primary); }
+  .cell-flex { display:flex; flex-direction: column; gap: 4px; }
+  .foot-note { font-size: 14.5px; color: var(--text-muted); margin-top: 12px; padding: 0 8px; line-height: 1.6; }
+
+  .stack-row { display:flex; align-items:center; gap:10px; }
+  .verdict { display:inline-flex; align-items:center; gap:4px; font-size: 14px; font-weight:700; padding: 2px 9px 2px 6px; border-radius: 20px; width: fit-content; white-space: nowrap; }
+  .verdict.good { color: var(--good); background: color-mix(in srgb, var(--good) 14%, transparent); }
+  .verdict.bad { color: var(--critical); background: color-mix(in srgb, var(--critical) 14%, transparent); }
+  .verdict.warn { color: #8a6200; background: color-mix(in srgb, var(--warning) 25%, transparent); }
+  .verdict.muted { color: var(--text-muted); background: var(--page-plane); }
+  .verdict.critical { color: #fff; background: var(--critical); font-weight: 800; }
+  .pill-row { display:flex; gap:7px; margin-top:3px; flex-wrap:wrap; }
+
+  .comp-bar { position: relative; display:flex; width: 150px; height: 16px; border-radius: 5px; overflow: hidden; background: var(--page-plane); }
+  .comp-legend { display:flex; gap:11px; font-size: 14px; color: var(--text-secondary); margin-top: 3px; white-space: nowrap; }
+  .comp-legend .dot { width:7px; height:7px; border-radius:2px; display:inline-block; margin-right:3px; }
+  .comp-total { font-size: 15px; color: var(--text-primary); font-weight:700; margin-top:1px; }
+
+  /* ---------- Zone 2: focus charts ---------- */
+  .focus-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 18px; }
+  .chart-card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
+  .chart-card h3 { font-size: 17px; margin: 0 0 4px; font-weight: 700; }
+  .chart-card .desc { font-size: 14px; color: var(--text-muted); margin-bottom: 12px; }
+  .chart-wrap { height: 240px; }
+
+  /* Zone 2 "Modern Vibrant" redesign — deliberately more colorful than the
+     rest of the dashboard (Zone 1/3/4/5 stay low-noise/muted). Scoped to
+     .zone2-vibrant so it never touches .chart-card/.focus-grid used elsewhere
+     (e.g. Zone 4's repair YTD charts). */
+  .zone2-vibrant .focus-grid { grid-template-columns: repeat(2, 1fr); }
+  .zone2-vibrant .chart-card {
+    position: relative; border-radius: 20px; padding: 22px 22px 18px;
+    box-shadow: 0 1px 3px rgba(16,24,60,.06); transition: box-shadow .2s, transform .2s;
+  }
+  .zone2-vibrant .chart-card:hover { box-shadow: 0 10px 30px rgba(16,24,60,.10); transform: translateY(-2px); }
+  .zone2-vibrant .chart-card h3 { padding-right: 100px; }
+  .zone2-vibrant .chart-card .desc { padding-right: 100px; }
+  .zone2-vibrant .chart-wrap { height: 260px; }
+  .zone2-vibrant .full-span { grid-column: 1 / -1; }
+  .zone2-vibrant .badge-highlight {
+    position: absolute; top: 20px; right: 20px; text-align: right; padding: 5px 12px; border-radius: 20px;
+    font-size: 13px; font-weight: 700; white-space: nowrap;
+  }
+  @media (max-width: 900px) { .zone2-vibrant .focus-grid { grid-template-columns: 1fr; } .zone2-vibrant .full-span { grid-column: auto; } }
+
+  #z2Tooltip {
+    position: fixed; pointer-events: none; opacity: 0; transition: opacity .1s ease;
+    background: color-mix(in srgb, var(--surface-1) 72%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; box-shadow: 0 8px 24px rgba(16,24,60,.18);
+    font-size: 14px; color: var(--text-primary); min-width: 140px; z-index: 20;
+  }
+  #z2Tooltip .tt-title { font-weight: 700; font-size: 13.5px; color: var(--text-secondary); margin-bottom: 4px; }
+  #z2Tooltip .tt-row { display:flex; align-items:center; gap:6px; font-weight: 700; }
+  #z2Tooltip .tt-dot { width:8px; height:8px; border-radius:50%; }
+
+  /* ---------- Zone 4 ---------- */
+  .zone4-section-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 26px 0 14px; padding-bottom: 10px; border-bottom: 2px solid var(--border); }
+  .zone4-section-head:first-of-type { margin-top: 4px; }
+  .zone4-section-head .num { font-size: 12px; font-weight: 800; color: #fff; background: var(--series-1); border-radius: 20px; padding: 3px 11px; flex-shrink: 0; }
+  .zone4-section-head h3 { font-size: 18px; margin: 0; }
+  .zone4-section-head .en { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+  .repair-cat-legend-row { display: flex; gap: 8px 16px; margin-top: 12px; font-size: 12px; color: var(--text-secondary); flex-wrap: wrap; }
+  .repair-cat-legend-row .sq { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: middle; }
+  .repair-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 20px; }
+  .repair-kpi-card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .repair-kpi-card .label { font-size: 14.5px; color: var(--text-secondary); font-weight: 600; margin-bottom: 6px; }
+  .repair-kpi-card .value { font-size: 24.5px; font-weight: 800; }
+  .repair-kpi-card .value.accent-blue { color: var(--series-1); }
+  .repair-kpi-card .value.accent-red { color: var(--critical); }
+  .repair-kpi-card .value.accent-green { color: var(--good); }
+  .repair-kpi-card .sub { font-size: 13.5px; color: var(--text-muted); margin-top: 3px; }
+
+  .repair-controls { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .repair-controls .left { display: flex; gap: 10px; flex-wrap: wrap; flex: 1; }
+  .repair-controls input, .repair-controls select {
+    background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border);
+    border-radius: 9px; padding: 9px 13px; font-size: 16px;
+  }
+  .repair-tag { display:inline-flex; align-items:center; font-size: 13px; font-weight: 700; padding: 2px 9px; border-radius: 20px; margin: 2px 4px 0 0; }
+
+  .repair-ytd-section { margin-bottom: 22px; }
+  .repair-ytd-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .repair-ytd-head h3 { font-size: 17px; font-weight: 700; margin: 0; }
+  .repair-donut-row { display: flex; align-items: center; gap: 18px; }
+  .repair-donut-wrap { position: relative; width: 150px; height: 150px; flex-shrink: 0; }
+  .repair-donut-center {
+    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; text-align: center; pointer-events: none; padding: 0 10px;
+  }
+  .repair-donut-center .lbl { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+  .repair-donut-center .val { font-size: 18px; font-weight: 800; color: var(--text-primary); margin-top: 2px; }
+  .repair-cat-legend { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .repair-cat-legend .cat-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    font-size: 13.5px; padding: 3px 6px; border-radius: 6px; cursor: pointer; white-space: nowrap;
+  }
+  .repair-cat-legend .cat-row:hover { background: var(--page-plane); }
+  .repair-cat-legend .cat-row.active { background: var(--page-plane); font-weight: 700; }
+  .repair-cat-legend .cat-name { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--text-secondary); }
+  .repair-cat-legend .cat-dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+  .repair-cat-legend .cat-pct { color: var(--text-muted); flex-shrink: 0; }
+
+  tr.repair-hot td:first-child { box-shadow: inset 4px 0 0 var(--critical); }
+  tr.repair-hot { background: color-mix(in srgb, var(--warning) 8%, transparent); }
+  .hot-badge { display:inline-flex; align-items:center; margin-left: 8px; font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 20px; background: var(--critical); color: #fff; }
+
+  .accordion-item { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px; overflow: hidden; }
+  .accordion-item.hot { border-color: var(--warning); }
+  .accordion-head { display:flex; align-items:center; justify-content: space-between; gap: 16px; padding: 15px 20px; cursor: pointer; flex-wrap: wrap; }
+  .accordion-item.hot .accordion-head { background: color-mix(in srgb, var(--warning) 10%, transparent); }
+  .accordion-head .left { display:flex; align-items:center; gap: 14px; flex-wrap: wrap; }
+  .accordion-head .plate { font-size: 18.5px; font-weight: 800; }
+  .accordion-head .meta { font-size: 14px; color: var(--text-muted); }
+  /* Baseline-aligned ฿ + amount so the currency glyph never sits visually
+     offset from the digits (some fonts render ฿ a touch high/low inline). */
+  .accordion-head .total { display: flex; align-items: baseline; gap: 2px; font-size: 18px; font-weight: 800; color: var(--text-primary); white-space: nowrap; }
+  .accordion-head .total .cur { font-size: 18px; font-weight: 800; color: var(--text-primary); }
+  .accordion-head .total .amt { font-size: 18px; font-weight: 800; color: var(--text-primary); }
+  .bu-badge, .hot-badge { margin: 0; }
+  .accordion-arrow { transition: transform .15s; color: var(--text-muted); flex-shrink: 0; }
+  .accordion-item.open .accordion-arrow { transform: rotate(180deg); }
+  .accordion-body { border-top: 1px solid var(--border); padding: 12px 20px 16px; }
+
+  /* Expanded repair items — mini-table with a clear header row, instead of
+     stacked text lines, to keep Year-Month/Description/Vendor+Category/
+     Amount scannable in columns. */
+  .repair-mini-table { width: 100%; border-collapse: collapse; background: color-mix(in srgb, var(--surface-2) 60%, transparent); border: 1px solid color-mix(in srgb, var(--border) 60%, transparent); border-radius: 10px; overflow: hidden; }
+  .repair-mini-table th { text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .02em; padding: 9px 14px; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+  .repair-mini-table th.col-amount { text-align: right; }
+  .repair-mini-table th.col-ym { width: 86px; }
+  .repair-mini-table td { padding: 10px 14px; border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent); vertical-align: top; font-size: 14.5px; }
+  .repair-mini-table tr:last-child td { border-bottom: none; }
+  .repair-mini-table .col-ym { color: var(--text-muted); font-size: 13.5px; white-space: nowrap; }
+  .repair-mini-table .col-desc { font-weight: 700; color: var(--text-primary); }
+  .repair-mini-table .col-vendor { color: var(--text-secondary); }
+  .repair-mini-table .col-vendor .shop-name { display: block; margin-bottom: 4px; }
+  .repair-mini-table .col-amount { text-align: right; font-weight: 800; color: var(--text-primary); white-space: nowrap; }
+  .repair-tag-outline { display: inline-flex; align-items: center; font-size: 12.5px; font-weight: 700; padding: 2px 9px; border-radius: 20px; background: transparent; border: 1px solid; }
+</style>
+</head>
+<body>
+
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <div id="statusMsg" style="font-size:15.5px;">กำลังเชื่อมต่อ Google Sheet…</div>
+</div>
+
+<header>
+  <div>
+    <h1>Fuel Ops Dashboard</h1>
+    <div class="sub" id="lastUpdated"></div>
+  </div>
+  <div class="header-actions">
+    <button class="icon-btn" id="refreshBtn">รีเฟรช</button>
+    <button class="icon-btn" id="themeBtn">ธีม</button>
+  </div>
+</header>
+
+<div class="zone-tabs" id="zoneTabs">
+  <div class="zone-tab active" data-zone="zonePanel1"><span class="dot">1</span> ภาพรวมประจำเดือน</div>
+  <div class="zone-tab" data-zone="zonePanel3"><span class="dot">3</span> ตารางรายเส้นทาง</div>
+  <div class="zone-tab" data-zone="zonePanel4"><span class="dot">4</span> รายการซ่อม</div>
+  <div class="zone-tab" data-zone="zonePanel5"><span class="dot">5</span> จุดที่ควรเฝ้าระวัง</div>
+</div>
+
+<div class="filter-bar">
+  <div><label for="rangePreset">ช่วงเวลา</label><select id="rangePreset"></select></div>
+  <div class="custom-range-fields" id="customRangeFields">
+    <div><label for="fromMonthSelect">จากเดือน</label><select id="fromMonthSelect"></select></div>
+    <div><label for="toMonthSelect">ถึงเดือน</label><select id="toMonthSelect"></select></div>
+  </div>
+  <div><label for="buSelect">หน่วยธุรกิจ (BU)</label><select id="buSelect"></select></div>
+  <div class="range-pill" id="rangePill"></div>
+  <div id="statusMsgBar" style="font-size:15px;color:var(--text-muted);"></div>
+</div>
+
+<!-- Zone 4-only filters — lived inside the Zone 4 panel body before (buried
+     below the KPI cards and charts); moved up here next to the main filters
+     so all filtering happens in one place. Only visible while Zone 4 is the
+     active tab (toggled by switchZoneTab via the "active" class). -->
+<div class="filter-bar zone4-filter-bar" id="zone4FilterBar">
+  <div><label for="repairVehicleFilter">รถ (ทะเบียน)</label><select id="repairVehicleFilter"><option value="ALL">ทุกคัน</option></select></div>
+  <div><label for="repairTagFilter">ประเภทงาน</label><select id="repairTagFilter"><option value="ALL">ทุกประเภทงาน</option></select></div>
+  <div><label for="repairShopFilter">ศูนย์ซ่อม</label><select id="repairShopFilter"><option value="ALL">ทุกศูนย์ซ่อม</option></select></div>
+</div>
+
+<div id="app" style="display:none;">
+<main>
+
+  <section class="block zone-panel active" id="zonePanel1">
+    <h2 class="block-title"><span class="zone-tag">ZONE 1</span> ภาพรวมประจำเดือน <span class="n" id="ovTitle"></span></h2>
+    <div class="alert-bar" id="zone1AlertBar"></div>
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">ยอดขายรวม</div>
+        <div class="kpi-value"><span id="kpiLiters">-</span><span class="unit">ลิตร</span></div>
+        <div id="kpiLitersDelta"></div>
+        <div id="kpiLitersTargetPill"></div>
+        <div class="kpi-spark"><canvas id="sparkLiters"></canvas></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">กำไรขั้นต้นรวม</div>
+        <div class="kpi-value">฿ <span id="kpiGP">-</span></div>
+        <div id="kpiGPDelta"></div>
+        <div class="kpi-spark"><canvas id="sparkGP"></canvas></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">น้ำมันขาด/เกิน</div>
+        <div class="kpi-value"><span id="kpiFuelDiff">-</span><span class="unit">%</span></div>
+        <div id="kpiFuelDiffDelta"></div>
+        <div class="kpi-sub" id="kpiFuelDiffSub"></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">อัตราการใช้น้ำมันเฉลี่ย</div>
+        <div class="kpi-value"><span id="kpiFuelRate">-</span><span class="unit">กม./ล.</span></div>
+        <div id="kpiFuelRateDelta"></div>
+        <div class="kpi-spark"><canvas id="sparkFuelRate"></canvas></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">เงินสด : เงินเชื่อ</div>
+        <div class="kpi-donut-wrap">
+          <canvas id="cashCreditDonut"></canvas>
+          <div>
+            <div class="kpi-value" style="font-size:24.5px;" id="cashCreditLabel">-</div>
+            <div id="cashCreditDelta"></div>
+          </div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">ค่าซ่อมบำรุงรวม</div>
+        <div class="kpi-value">฿ <span id="kpiRepairTotal">-</span></div>
+        <div id="kpiRepairDelta"></div>
+        <div class="kpi-spark"><canvas id="sparkRepair"></canvas></div>
+      </div>
+    </div>
+
+    <h3 class="block-subtitle"><span class="zone-tag">ZONE 2</span> กราฟเจาะลึกที่ตารางแทนไม่ได้</h3>
+    <div class="zone2-vibrant">
+      <div class="focus-grid">
+        <div class="chart-card">
+          <h3>Top 5 เส้นทาง — ยอดขาย (ลิตร)</h3>
+          <div class="desc">รวมทั้งช่วงเดือนที่เลือกต่อเส้นทาง เรียงมาก → น้อย ตามตัวกรอง BU ปัจจุบัน</div>
+          <div class="chart-wrap"><canvas id="top5Liters"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Top 5 เส้นทาง — กำไรขั้นต้น</h3>
+          <div class="desc">รวมทั้งช่วงเดือนที่เลือกต่อเส้นทาง เรียงมาก → น้อย ตามตัวกรอง BU ปัจจุบัน</div>
+          <div class="chart-wrap"><canvas id="top5GP"></canvas></div>
+        </div>
+        <div class="chart-card full-span">
+          <div class="badge-highlight" id="z2BadgeLiters" style="color:#2563eb;background:rgba(37,99,235,.1);"></div>
+          <h3>ยอดขายลิตรย้อนหลัง 12 เดือน</h3>
+          <div class="desc">รวมทุกเส้นทางตามตัวกรอง BU ปัจจุบัน — ย้อนหลัง 12 เดือนจากเดือนล่าสุดในช่วงที่เลือก</div>
+          <div class="chart-wrap"><canvas id="trendLiters"></canvas></div>
+        </div>
+        <div class="chart-card full-span">
+          <div class="badge-highlight" id="z2BadgeGP" style="color:#10b981;background:rgba(16,185,129,.1);"></div>
+          <h3>กำไรขั้นต้นย้อนหลัง 12 เดือน</h3>
+          <div class="desc">รวมทุกเส้นทางตามตัวกรอง BU ปัจจุบัน — ย้อนหลัง 12 เดือนจากเดือนล่าสุดในช่วงที่เลือก</div>
+          <div class="chart-wrap"><canvas id="trendGP"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="badge-highlight" id="z2BadgeTrips" style="color:#6366f1;background:rgba(99,102,241,.1);"></div>
+          <h3>จำนวนเที่ยววิ่งรายเส้นทางประจำเดือน</h3>
+          <div class="desc">แสดงเฉพาะเส้นทางที่มีเที่ยววิ่ง (&gt; 0) · แยกแท่งตามรถเมื่อเส้นทางเดียวกันมีหลายคันในช่วงที่เลือก</div>
+          <div class="chart-wrap"><canvas id="tripsChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="badge-highlight" id="z2BadgeFuelDiff" style="color:#fb7185;background:rgba(251,113,133,.12);"></div>
+          <h3>น้ำมันขาด/เกิน (%) รายเส้นทาง</h3>
+          <div class="desc">เรียงจากขาดมากสุดไปเกินมากสุด · แถบเขียวอ่อน = ช่วงในเกณฑ์ปกติ</div>
+          <div class="chart-wrap"><canvas id="fuelDiffBig"></canvas></div>
+        </div>
+        <div class="chart-card full-span">
+          <div class="badge-highlight" id="z2BadgeScatter" style="color:var(--text-secondary);background:color-mix(in srgb, var(--text-secondary) 10%, transparent);"></div>
+          <h3>ความสัมพันธ์ ค่าซ่อม vs อัตราการใช้น้ำมัน (Quadrant Analysis)</h3>
+          <div class="desc">แต่ละจุด = 1 เส้นทาง (Route ID) · ขนาดจุด = ยอดขายลิตร · สี = BU · เส้นประ = ค่าเฉลี่ยของข้อมูลที่กรองอยู่</div>
+          <div class="chart-wrap" style="height:340px;"><canvas id="scatterChart"></canvas></div>
+          <div class="legend-row" style="display:flex;gap:14px;margin-top:10px;font-size:11.5px;color:var(--text-secondary);flex-wrap:wrap;">
+            <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:middle;background:#ef444422;"></span>🔴 โซนต้องปรับปรุง/วิกฤต (ซ่อมสูง + อัตราต่ำกว่าเป้า)</span>
+            <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:middle;background:#10b98122;"></span>🟢 โซนประสิทธิภาพสูง (ซ่อมต่ำ + อัตราดีกว่าเป้า)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block zone-panel" id="zonePanel3">
+    <h2 class="block-title"><span class="zone-tag">ZONE 3</span> ตารางประสิทธิภาพรายเส้นทาง (Route ID) <span class="n" id="vehTitle"></span></h2>
+    <div class="card full-table-wrap">
+      <table class="data-table" id="unifiedTable">
+        <thead>
+          <tr>
+            <th data-key="routeId">Route ID <span class="sort-arrow">↕</span></th>
+            <th data-key="liters">ยอดขาย &amp; ผลต่างน้ำมัน <span class="sort-arrow">↕</span></th>
+            <th data-key="gp">ผลประกอบการกำไร <span class="sort-arrow">↕</span></th>
+            <th data-key="repair">ค่าซ่อม &amp; ประสิทธิภาพน้ำมัน <span class="sort-arrow">↕</span></th>
+            <th data-key="cashPct" style="text-align:center;">เงินสด : เงินเชื่อ (เทียบเป้า) <span class="sort-arrow">↕</span></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="foot-note">แถวคือ 1 Route ID · ชื่อรถใต้ Route ID = รถที่วิ่งเส้นทางนี้ในเดือนที่เลือก (สลับรถได้ตามจริง) · แถวที่มีแถบสีแดงด้านซ้าย = เส้นทางนี้ติดอยู่ในรายการเฝ้าระวัง (Zone 5) อย่างน้อย 1 ข้อ · แถว "ไม่มี Route ID" = ยังไม่ได้กรอก Route ID ในชีตต้นทาง ระบบใช้ชื่อรถแทนไปก่อน</div>
+    </div>
+  </section>
+
+  <section class="block zone-panel" id="zonePanel4">
+    <h2 class="block-title"><span class="zone-tag">ZONE 4</span> รายการซ่อมประจำเดือน (จากชีตซ่อมบำรุง) <span class="n" id="repairTitle"></span></h2>
+    <div id="repairZoneStatus" style="font-size:14.5px;color:var(--text-muted);margin-bottom:12px;"></div>
+
+    <div class="zone4-section-head">
+      <span class="num">1</span>
+      <h3>ภาพรวมตามช่วงเดือนที่เลือก</h3>
+      <span class="en" id="zone4Section1Range">Monthly Performance &amp; Breakdown</span>
+    </div>
+
+    <div class="repair-kpi-grid">
+      <div class="repair-kpi-card">
+        <div class="label">ยอดรวมค่าซ่อม</div>
+        <div class="value" id="repKpiTotal">-</div>
+      </div>
+      <div class="repair-kpi-card">
+        <div class="label">จำนวนรถ</div>
+        <div class="value accent-blue" id="repKpiVehicles">-</div>
+      </div>
+      <div class="repair-kpi-card">
+        <div class="label" id="repKpiTopLabel">ยอดสูงสุด</div>
+        <div class="value accent-red" id="repKpiTopValue">-</div>
+        <div class="sub">สูงกว่ารถคันอื่นในช่วงที่เลือก</div>
+      </div>
+      <div class="repair-kpi-card">
+        <div class="label">ศูนย์ซ่อม</div>
+        <div class="value accent-green" id="repKpiShops">-</div>
+      </div>
+    </div>
+
+    <div class="focus-grid" style="grid-template-columns: 1.3fr 1fr; margin-bottom:22px;">
+      <div class="chart-card">
+        <h3>ค่าซ่อมประจำเดือน</h3>
+        <div class="desc" id="repairMonthlyChartDesc">รวมค่าซ่อมทั้งช่วงที่เลือกไว้ในตัวกรองต่อคัน สีของแท่งแบ่งแบบ Stacked ตามประเภทงานซ่อม เรียงมาก → น้อย</div>
+        <div class="chart-wrap" style="height:280px;"><canvas id="repairMonthlyStackedChart"></canvas></div>
+        <div class="repair-cat-legend-row" id="repairMonthlyLegend"></div>
+      </div>
+      <div class="chart-card">
+        <h3>สัดส่วนงานซ่อม (ช่วงที่เลือก)</h3>
+        <div class="desc" id="repairSection1DonutDesc">ข้อมูลเดียวกับกราฟด้านซ้าย — ตามช่วงเดือน/BU/รถ/ประเภทงาน/ศูนย์ซ่อมที่กรองอยู่</div>
+        <div class="repair-donut-row">
+          <div class="repair-donut-wrap">
+            <canvas id="repairSection1DonutChart"></canvas>
+            <div class="repair-donut-center">
+              <div class="lbl">ทั้งหมด</div>
+              <div class="val" id="repairSection1DonutCenterValue">฿0</div>
+            </div>
+          </div>
+          <div class="repair-cat-legend" id="repairSection1DonutLegend"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="repairAccordionWrap"></div>
+
+    <div class="zone4-section-head">
+      <span class="num">2</span>
+      <h3>แนวโน้มค่าซ่อมสะสมประจำปี &amp; สัดส่วนตามประเภทงานรายปี</h3>
+      <span class="en" id="zone4Section2Range">YTD Annual Summary &amp; Category Share</span>
+    </div>
+
+    <div class="repair-ytd-section">
+      <div class="repair-kpi-grid" style="margin-bottom:16px;">
+        <div class="repair-kpi-card">
+          <div class="label">ค่าซ่อมสะสม YTD</div>
+          <div class="value" id="ytdKpiTotal">-</div>
+        </div>
+        <div class="repair-kpi-card">
+          <div class="label">เดือนที่ซ่อมสูงสุด</div>
+          <div class="value" id="ytdKpiTopMonth">-</div>
+        </div>
+        <div class="repair-kpi-card">
+          <div class="label">รถที่ค่าซ่อมสูงสุดประจำปี</div>
+          <div class="value" id="ytdKpiTopVehicle">-</div>
+        </div>
+      </div>
+
+      <div class="focus-grid" style="grid-template-columns: 1.3fr 1fr;">
+        <div class="chart-card">
+          <h3>แนวโน้มค่าซ่อมสะสมประจำปี</h3>
+          <div class="desc" id="repairYtdChartDesc">สะสมตั้งแต่ ม.ค. ถึงเดือนล่าสุดที่มีข้อมูลของปีนั้น — ไม่ตัดตามช่วงที่เลือกในตัวกรองด้านบน (ยังกรองตาม BU/รถ/ประเภทงาน/ศูนย์ซ่อมที่เลือกอยู่)</div>
+          <div class="chart-wrap"><canvas id="repairYtdChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+            <h3 style="margin:0;">สัดส่วนตามประเภทงานซ่อม (รายปี)</h3>
+            <span class="desc" id="repairDonutFilterNote" style="margin:0;"></span>
+          </div>
+          <div class="repair-donut-row">
+            <div class="repair-donut-wrap">
+              <canvas id="repairDonutChart"></canvas>
+              <div class="repair-donut-center">
+                <div class="lbl" id="repairDonutCenterLabel">ทั้งหมด</div>
+                <div class="val" id="repairDonutCenterValue">฿0</div>
+              </div>
+            </div>
+            <div class="repair-cat-legend" id="repairCatLegend"></div>
+          </div>
+          <div class="desc" style="margin-top:8px;">คลิกชิ้นโดนัทหรือรายการใน Legend เพื่อกรองตารางรายการซ่อมด้านล่างเฉพาะประเภทนั้น (เลือก "ทุกประเภทงาน" ในตัวกรองด้านล่างเพื่อยกเลิก)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="foot-note">"ประเภทงาน" (อะไหล่ / ค่าแรง / ยาง) จัดหมวดอัตโนมัติจากคำในชื่อรายการซ่อม อาจไม่ตรง 100% — ถ้าต้องการความแม่นยำเต็มที่ แนะนำเพิ่มคอลัมน์ "ประเภทงาน" ในชีต "ซ่อมบำรุง" โดยตรง</div>
+  </section>
+
+  <section class="block zone-panel" id="zonePanel5">
+    <h2 class="block-title"><span class="zone-tag">ZONE 5</span> จุดที่ควรเฝ้าระวัง <span class="n" id="excTitle"></span></h2>
+
+    <div class="sev-summary" id="sevSummary">
+      <div class="sev-pill active" data-sev="ALL"><span class="emoji">📋</span><div><div class="count" id="sevCountAll">0</div><div class="lbl">ทั้งหมด</div></div></div>
+      <div class="sev-pill" data-sev="critical"><span class="emoji">🔴</span><div><div class="count" style="color:var(--critical);" id="sevCountCritical">0</div><div class="lbl">วิกฤต</div></div></div>
+      <div class="sev-pill" data-sev="serious"><span class="emoji">🟠</span><div><div class="count" style="color:var(--serious);" id="sevCountSerious">0</div><div class="lbl">ต้องดู</div></div></div>
+      <div class="sev-pill" data-sev="warning"><span class="emoji">🟡</span><div><div class="count" style="color:#8a6200;" id="sevCountWarning">0</div><div class="lbl">เฝ้าระวัง</div></div></div>
+    </div>
+
+    <div class="exc-filter-row">
+      <select id="excSeverityFilter">
+        <option value="ALL">ทุกระดับความรุนแรง</option>
+        <option value="critical">🔴 วิกฤต</option>
+        <option value="serious">🟠 ต้องดู</option>
+        <option value="warning">🟡 เฝ้าระวัง</option>
+      </select>
+      <select id="excRuleFilter"><option value="ALL">ทุกประเภทปัญหา</option></select>
+      <span class="clear-btn" id="excClearFilters">ล้างตัวกรอง</span>
+    </div>
+
+    <div class="alert-col-header">
+      <span>ระดับ</span><span>ประเด็น</span><span>เส้นทาง / รถ</span><span>ค่าที่เกิดขึ้น</span><span>เกณฑ์อ้างอิง</span><span></span>
+    </div>
+    <div class="alert-table" id="alertTable"></div>
+    <div class="alert-empty-state" id="alertEmptyState" style="display:none;">ไม่พบรายการที่ตรงกับตัวกรอง</div>
+  </section>
+
+</main>
+</div>
+
+<div id="z2Tooltip"></div>
+
+<script>
+function loadScriptWithFallback(paths, testFn) {
+  return new Promise((resolve, reject) => {
+    let i = 0;
+    function tryNext() {
+      if (testFn && testFn()) { resolve(); return; }
+      if (i >= paths.length) { reject(new Error('โหลดไลบรารีไม่สำเร็จจากทุก CDN ที่ลอง')); return; }
+      const src = paths[i++];
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = () => resolve();
+      s.onerror = () => tryNext();
+      document.head.appendChild(s);
+    }
+    tryNext();
+  });
+}
+
+async function bootstrap() {
+  const statusEl = document.getElementById('statusMsg');
+  try {
+    statusEl.textContent = 'กำลังโหลดไลบรารีที่จำเป็น…';
+    await loadScriptWithFallback([
+      'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js',
+      'https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js',
+      'https://unpkg.com/chart.js@4.4.4/dist/chart.umd.min.js',
+    ], () => typeof Chart !== 'undefined');
+    await loadScriptWithFallback([
+      'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js',
+      'https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js',
+      'https://unpkg.com/papaparse@5.4.1/papaparse.min.js',
+    ], () => typeof Papa !== 'undefined');
+  } catch (err) {
+    statusEl.textContent = 'โหลดไลบรารีที่จำเป็น (Chart.js / PapaParse) ไม่สำเร็จ — เครือข่ายอาจบล็อก CDN บางแห่ง ลองรีเฟรชหรือเปลี่ยนเครือข่าย';
+    statusEl.classList.add('err');
+    return;
+  }
+  loadData();
+}
+
+const SHEET_ID = '1Tyx1I5NJR1S-r5WiQX0_oAZ5AsIJo9zUZ98oPQ0TTg0';
+const CSV_URLS = [
+  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`,
+  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`,
+];
+const REPAIR_SHEET_NAME = 'ซ่อมบำรุง';
+const REPAIR_CSV_URLS = [
+  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(REPAIR_SHEET_NAME)}`,
+];
+const TARGET_SHEET_NAME = 'Targets';
+const TARGET_CSV_URLS = [
+  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(TARGET_SHEET_NAME)}`,
+];
+const CONFIG_SHEET_NAME = 'Config';
+const CONFIG_CSV_URLS = [
+  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(CONFIG_SHEET_NAME)}`,
+];
+
+const COLORS = () => {
+  const cs = getComputedStyle(document.documentElement);
+  return {
+    s1: cs.getPropertyValue('--series-1').trim(),
+    s2: cs.getPropertyValue('--series-2').trim(),
+    s3: cs.getPropertyValue('--series-3').trim(),
+    s4: cs.getPropertyValue('--series-4').trim(),
+    s5: cs.getPropertyValue('--series-5').trim(),
+    s6: cs.getPropertyValue('--series-6').trim(),
+    s7: cs.getPropertyValue('--series-7').trim(),
+    good: cs.getPropertyValue('--good').trim(),
+    critical: cs.getPropertyValue('--critical').trim(),
+    text: cs.getPropertyValue('--text-primary').trim(),
+    textSecondary: cs.getPropertyValue('--text-secondary').trim(),
+    muted: cs.getPropertyValue('--text-muted').trim(),
+    grid: cs.getPropertyValue('--grid-line').trim(),
+    surface: cs.getPropertyValue('--surface-1').trim(),
+  };
+};
+
+function parseNum(raw) {
+  if (raw === undefined || raw === null) return 0;
+  let s = String(raw).trim();
+  if (s === '') return 0;
+  let neg = false;
+  if (s.startsWith('(') && s.endsWith(')')) { neg = true; s = s.slice(1, -1); }
+  s = s.replace(/,/g, '').trim();
+  let n = parseFloat(s);
+  if (isNaN(n)) return 0;
+  return neg ? -n : n;
+}
+function fmt(n, d = 0) { return n.toLocaleString('th-TH', { minimumFractionDigits: d, maximumFractionDigits: d }); }
+function fmtSigned(n, d = 0) { const s = fmt(Math.abs(n), d); return (n < 0 ? '-' : (n > 0 ? '+' : '')) + s; }
+function avg(arr) { return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0; }
+function stddev(arr) { if (arr.length < 2) return 0; const m = avg(arr); return Math.sqrt(avg(arr.map(v => (v - m) ** 2))); }
+function median(arr) { if (!arr.length) return 0; const s = [...arr].sort((a, b) => a - b); const mid = Math.floor(s.length / 2); return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2; }
+function pct(cur, prev) { if (!prev) return cur ? null : 0; return ((cur - prev) / Math.abs(prev)) * 100; }
+function sum(rows, key) { return rows.reduce((a, r) => a + (r[key] || 0), 0); }
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])); }
+
+let RAW = [];
+let RAW_REPAIR = [];
+let TARGET_CASH_BY_BU = {};
+let FUEL_DIFF_TOLERANCE_PCT = 0.5;
+let STATE = { fromYm: null, toYm: null, rangePreset: 'latest', bu: 'ALL', sortKey: 'liters', sortDir: 'desc', repairTag: 'ALL', repairShop: 'ALL', repairVehicle: 'ALL', excSeverity: 'ALL', excRule: 'ALL' };
+let CHARTS = {};
+let LAST_ROWDATA = [];
+
+const TARGET_CASH_DEFAULT = 70;
+function getTargetCashPct(bu) {
+  if (bu && TARGET_CASH_BY_BU[bu] !== undefined) return TARGET_CASH_BY_BU[bu];
+  return TARGET_CASH_DEFAULT;
+}
+function weightedTargetCashPct(rows) {
+  const litersByBu = {};
+  rows.forEach(r => { litersByBu[r.bu] = (litersByBu[r.bu] || 0) + r.cashL + r.creditL; });
+  const bus = Object.keys(litersByBu);
+  if (!bus.length) return TARGET_CASH_DEFAULT;
+  const total = bus.reduce((a, b) => a + litersByBu[b], 0) || 1;
+  return bus.reduce((s, b) => s + getTargetCashPct(b) * (litersByBu[b] / total), 0);
+}
+
+async function loadTargetsData() {
+  const statusEl = document.getElementById('statusMsgBar');
+  try {
+    let text = null, lastErr = null;
+    for (const url of TARGET_CSV_URLS) {
+      try {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        text = await res.text();
+        if (text && text.trim()) break;
+      } catch (e) { lastErr = e; }
+    }
+    if (!text) throw (lastErr || new Error('ไม่สามารถเชื่อมต่อได้'));
+    const parsed = Papa.parse(text.trim(), { skipEmptyLines: true });
+    const rows = parsed.data;
+    TARGET_CASH_BY_BU = {};
+    rows.slice(1).filter(r => r.length > 1 && r[0]).forEach(r => { TARGET_CASH_BY_BU[(r[0] || '').trim()] = parseNum(r[1]); });
+  } catch (err) {
+    TARGET_CASH_BY_BU = {};
+    statusEl.textContent += (statusEl.textContent ? ' · ' : '') +
+      `โหลดเป้าเงินสด-เชื่อจากแท็บ "${TARGET_SHEET_NAME}" ไม่สำเร็จ — ใช้ค่าเริ่มต้น ${TARGET_CASH_DEFAULT}% แทนชั่วคราว`;
+  }
+}
+
+async function loadConfigData() {
+  const statusEl = document.getElementById('statusMsgBar');
+  try {
+    let text = null, lastErr = null;
+    for (const url of CONFIG_CSV_URLS) {
+      try {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        text = await res.text();
+        if (text && text.trim()) break;
+      } catch (e) { lastErr = e; }
+    }
+    if (!text) throw (lastErr || new Error('ไม่สามารถเชื่อมต่อได้'));
+    const parsed = Papa.parse(text.trim(), { skipEmptyLines: true });
+    const rows = parsed.data;
+    const kv = {};
+    rows.slice(1).filter(r => r.length > 1 && r[0]).forEach(r => { kv[(r[0] || '').trim()] = r[1]; });
+    if (kv['FuelDiffTolerancePct'] !== undefined) {
+      const v = parseNum(kv['FuelDiffTolerancePct']);
+      if (v > 0) FUEL_DIFF_TOLERANCE_PCT = v;
+    }
+  } catch (err) {
+    statusEl.textContent += (statusEl.textContent ? ' · ' : '') +
+      `โหลดค่าเป้าจากแท็บ "${CONFIG_SHEET_NAME}" ไม่สำเร็จ — ใช้ค่าเริ่มต้น ±${FUEL_DIFF_TOLERANCE_PCT}% แทนชั่วคราว`;
+  }
+}
+
+async function loadRepairData() {
+  const statusEl = document.getElementById('repairZoneStatus');
+  try {
+    statusEl.textContent = 'กำลังโหลดข้อมูลจากแท็บ "ซ่อมบำรุง"…';
+    let text = null, lastErr = null;
+    for (const url of REPAIR_CSV_URLS) {
+      try {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        text = await res.text();
+        if (text && text.trim()) break;
+      } catch (e) { lastErr = e; }
+    }
+    if (!text) throw (lastErr || new Error('ไม่สามารถเชื่อมต่อได้'));
+    const parsed = Papa.parse(text.trim(), { skipEmptyLines: true });
+    const rows = parsed.data;
+    RAW_REPAIR = rows.slice(1).filter(r => r.length > 2 && r[1]).map(r => ({
+      bu: (r[0] || '').trim(),
+      ym: (r[1] || '').trim(),
+      vehicle: (r[2] || '').trim(),
+      item: (r[3] || '').trim(),
+      cost: parseNum(r[4]),
+      shop: (r[5] || '').trim(),
+      categoryRaw: (r[6] || '').trim(),
+    }));
+    statusEl.textContent = '';
+  } catch (err) {
+    RAW_REPAIR = [];
+    statusEl.textContent = `ไม่สามารถโหลดข้อมูลจากแท็บ "${REPAIR_SHEET_NAME}" ได้ (${err.message}) — ตรวจสอบว่าชื่อแท็บถูกต้องและชีตเปิดสิทธิ์ "ทุกคนที่มีลิงก์ - ผู้ดู"`;
+  }
+}
+
+async function loadData() {
+  const statusEl = document.getElementById('statusMsg');
+  try {
+    statusEl.textContent = 'กำลังเชื่อมต่อ Google Sheet…';
+    statusEl.classList.remove('err');
+    let text = null, lastErr = null;
+    for (const url of CSV_URLS) {
+      try {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        text = await res.text();
+        if (text && text.trim()) break;
+      } catch (e) { lastErr = e; }
+    }
+    if (!text) throw (lastErr || new Error('ไม่สามารถเชื่อมต่อได้'));
+    const parsed = Papa.parse(text.trim(), { skipEmptyLines: true });
+    const rows = parsed.data;
+    // Column layout: BU, Year-Month, รถ, Route ID, ขายสด(L), ขายเชื่อ(L), ขายสด(THB),
+    // ขายเชื่อ(THB), ต้นทุนขาย(THB), กำไรขั้นต้น, เที่ยววิ่ง, ระยะทาง, เติมน้ำมัน,
+    // น้ำมันขาดเกิน, อัตราการใช้น้ำมัน, ค่าซ่อม, Target Sales (Liter),
+    // Target Fuel Rate (km/L). New columns are always appended at the end so
+    // earlier column positions never have to shift again for future additions.
+    RAW = rows.slice(1).filter(r => r.length > 2 && r[1]).map(r => {
+      const vehicle = (r[2] || '').trim();
+      const routeIdRaw = (r[3] || '').trim();
+      return {
+        bu: (r[0] || '').trim(),
+        ym: (r[1] || '').trim(),
+        vehicle,
+        routeId: routeIdRaw || vehicle,
+        routeMissing: !routeIdRaw,
+        cashL: parseNum(r[4]),
+        creditL: parseNum(r[5]),
+        cashTHB: parseNum(r[6]),
+        creditTHB: parseNum(r[7]),
+        costTHB: parseNum(r[8]),
+        grossProfit: parseNum(r[9]),
+        trips: parseNum(r[10]),
+        distanceKm: parseNum(r[11]),
+        fuelFilled: parseNum(r[12]),
+        fuelDiff: parseNum(r[13]),
+        fuelRate: parseNum(r[14]),
+        repairCost: parseNum(r[15]),
+        targetLiters: parseNum(r[16]),
+        targetFuelRate: parseNum(r[17]),
+      };
+    });
+    document.getElementById('lastUpdated').textContent = 'อัปเดตล่าสุด: ' + new Date().toLocaleString('th-TH');
+    statusEl.textContent = `โหลดข้อมูลสำเร็จ (${RAW.length} แถว)`;
+    initFilters();
+    await loadRepairData();
+    await loadTargetsData();
+    await loadConfigData();
+    renderAll();
+    document.getElementById('loadingOverlay').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+  } catch (err) {
+    statusEl.textContent = 'โหลดข้อมูลไม่สำเร็จ: ตรวจสอบว่า Google Sheet เปิดสิทธิ์ "ทุกคนที่มีลิงก์ - ดูได้" (' + err.message + ')';
+    statusEl.classList.add('err');
+  }
+}
+
+function prevYearYM(ym) { const [y, m] = ym.split('-'); return (parseInt(y, 10) - 1) + '-' + m; }
+function prevMonthYM(ym) { let [y, m] = ym.split('-').map(Number); m -= 1; if (m < 1) { m = 12; y -= 1; } return y + '-' + String(m).padStart(2, '0'); }
+function monthsTrailing(ym, n) { const list = [ym]; let cur = ym; for (let i = 1; i < n; i++) { cur = prevMonthYM(cur); list.unshift(cur); } return list; }
+
+// --- Month-range helpers (the dashboard filters on a [fromYm, toYm] range
+// everywhere now, not a single month) ---
+function ymToIndex(ym) { const [y, m] = ym.split('-').map(Number); return y * 12 + (m - 1); }
+function indexToYm(idx) { const y = Math.floor(idx / 12), m = (idx % 12) + 1; return y + '-' + String(m).padStart(2, '0'); }
+// Every "YYYY-MM" month from fromYm to toYm inclusive.
+function monthsInRange(fromYm, toYm) {
+  const list = [];
+  for (let i = ymToIndex(fromYm); i <= ymToIndex(toYm); i++) list.push(indexToYm(i));
+  return list;
+}
+// YoY comparison for a range: shift both ends back exactly one year, so a
+// 3-month range compares against the same 3 months the year before.
+function yoyShiftRange(fromYm, toYm) { return [prevYearYM(fromYm), prevYearYM(toYm)]; }
+// Period-over-period comparison: shift the whole range back by its own
+// length, giving the immediately preceding period of equal size (used for
+// the repair-cost KPI card, which intentionally compares to the period
+// right before rather than the same period last year).
+function prevPeriodShiftRange(fromYm, toYm) {
+  const n = ymToIndex(toYm) - ymToIndex(fromYm) + 1;
+  return [indexToYm(ymToIndex(fromYm) - n), indexToYm(ymToIndex(toYm) - n)];
+}
+function thaiMonthShort(ym) { const m = parseInt((ym || '').split('-')[1], 10) - 1; return YTD_MONTH_LABELS[m] || ym; }
+// Human-readable label for a range, e.g. "ก.ค. 69 - ก.ย. 69" (or just
+// "ก.ค. 69" when it's a single month). Buddhist year shown 2-digit to keep
+// it compact, matching how Thai business dashboards normally abbreviate it.
+function rangeLabel(fromYm, toYm) {
+  const yy = (ym) => (ym || '').split('-')[0].slice(-2);
+  const f = `${thaiMonthShort(fromYm)} ${yy(fromYm)}`;
+  if (fromYm === toYm) return f;
+  return `${f} - ${thaiMonthShort(toYm)} ${yy(toYm)}`;
+}
+// Builds the preset-range options from the months actually present in the
+// sheet. Quarters/YTD are anchored to the year of the latest available
+// month (not the device's current date), so the dashboard stays correct
+// however far the sheet's data lags behind today.
+function buildRangePresets(months) {
+  const latestYm = months[months.length - 1];
+  const latestYear = latestYm.split('-')[0];
+  const q = (n) => [`${latestYear}-${String(n * 3 - 2).padStart(2, '0')}`, `${latestYear}-${String(n * 3).padStart(2, '0')}`];
+  return [
+    { key: 'latest', label: 'เดือนล่าสุด', range: [latestYm, latestYm] },
+    { key: 'q1', label: `Q1 (${rangeLabel(...q(1))})`, range: q(1) },
+    { key: 'q2', label: `Q2 (${rangeLabel(...q(2))})`, range: q(2) },
+    { key: 'q3', label: `Q3 (${rangeLabel(...q(3))})`, range: q(3) },
+    { key: 'q4', label: `Q4 (${rangeLabel(...q(4))})`, range: q(4) },
+    { key: 'ytd', label: 'YTD (ม.ค. - เดือนปัจจุบัน)', range: [`${latestYear}-01`, latestYm] },
+    { key: 'custom', label: 'กำหนดเอง...', range: null },
+  ];
+}
+
+let FILTERS_BOUND = false;
+
+let RANGE_PRESETS = [];
+let ALL_MONTHS = [];
+
+// Applies a [fromYm, toYm] pair to STATE + the custom-range selects' values,
+// updates the range pill text, and re-renders. Shared by the preset dropdown
+// and by the custom from/to selects so they can never disagree.
+function applyRange(fromYm, toYm) {
+  STATE.fromYm = fromYm; STATE.toYm = toYm;
+  document.getElementById('fromMonthSelect').value = fromYm;
+  document.getElementById('toMonthSelect').value = toYm;
+  const n = monthsInRange(fromYm, toYm).length;
+  document.getElementById('rangePill').textContent = `${rangeLabel(fromYm, toYm)} (${n} เดือน)`;
+  renderAll();
+}
+
+function initFilters() {
+  ALL_MONTHS = [...new Set(RAW.map(r => r.ym))].sort();
+  const bus = [...new Set(RAW.map(r => r.bu))].sort();
+  const presetSelect = document.getElementById('rangePreset');
+  const fromSelect = document.getElementById('fromMonthSelect');
+  const toSelect = document.getElementById('toMonthSelect');
+  const buSelect = document.getElementById('buSelect');
+
+  RANGE_PRESETS = buildRangePresets(ALL_MONTHS);
+  presetSelect.innerHTML = RANGE_PRESETS.map(p => `<option value="${p.key}">${escapeHtml(p.label)}</option>`).join('');
+  fromSelect.innerHTML = ALL_MONTHS.map(m => `<option value="${m}">${rangeLabel(m, m)}</option>`).join('');
+  toSelect.innerHTML = fromSelect.innerHTML;
+
+  buSelect.innerHTML = '<option value="ALL">ทั้งหมด</option>';
+  bus.forEach(b => { const opt = document.createElement('option'); opt.value = b; opt.textContent = b; buSelect.appendChild(opt); });
+
+  // Default to "เดือนล่าสุด" on first load.
+  presetSelect.value = STATE.rangePreset || 'latest';
+  const initPreset = RANGE_PRESETS.find(p => p.key === presetSelect.value) || RANGE_PRESETS[0];
+  if (initPreset.range) {
+    applyRange(...initPreset.range);
+  } else {
+    document.getElementById('customRangeFields').classList.add('show');
+    applyRange(ALL_MONTHS[ALL_MONTHS.length - 1], ALL_MONTHS[ALL_MONTHS.length - 1]);
+  }
+
+  if (FILTERS_BOUND) return;
+  FILTERS_BOUND = true;
+
+  presetSelect.addEventListener('change', () => {
+    STATE.rangePreset = presetSelect.value;
+    const preset = RANGE_PRESETS.find(p => p.key === presetSelect.value);
+    const customFields = document.getElementById('customRangeFields');
+    if (!preset || !preset.range) {
+      customFields.classList.add('show');
+      applyRange(STATE.fromYm || ALL_MONTHS[ALL_MONTHS.length - 1], STATE.toYm || ALL_MONTHS[ALL_MONTHS.length - 1]);
+    } else {
+      customFields.classList.remove('show');
+      applyRange(...preset.range);
+    }
+  });
+  fromSelect.addEventListener('change', () => {
+    let toVal = toSelect.value;
+    if (fromSelect.value > toVal) toVal = fromSelect.value;
+    applyRange(fromSelect.value, toVal);
+  });
+  toSelect.addEventListener('change', () => {
+    let fromVal = fromSelect.value;
+    if (toSelect.value < fromVal) fromVal = toSelect.value;
+    applyRange(fromVal, toSelect.value);
+  });
+  buSelect.addEventListener('change', () => { STATE.bu = buSelect.value; renderAll(); });
+
+  document.querySelectorAll('#unifiedTable thead th').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.getAttribute('data-key');
+      if (STATE.sortKey === key) { STATE.sortDir = STATE.sortDir === 'desc' ? 'asc' : 'desc'; }
+      else { STATE.sortKey = key; STATE.sortDir = 'desc'; }
+      renderTable(LAST_ROWDATA);
+    });
+  });
+
+  document.getElementById('refreshBtn').addEventListener('click', () => {
+    document.getElementById('loadingOverlay').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('statusMsgBar').textContent = '';
+    loadData();
+  });
+  document.getElementById('themeBtn').addEventListener('click', () => {
+    const root = document.documentElement;
+    const cur = root.getAttribute('data-theme');
+    root.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+    renderAll();
+  });
+
+  document.querySelectorAll('.zone-tab').forEach(tab => {
+    tab.addEventListener('click', () => switchZoneTab(tab.getAttribute('data-zone')));
+  });
+
+  document.querySelectorAll('.sev-pill').forEach(pill => {
+    pill.addEventListener('click', () => { STATE.excSeverity = pill.getAttribute('data-sev'); renderAlertTable(); });
+  });
+  document.getElementById('excSeverityFilter').addEventListener('change', (e) => { STATE.excSeverity = e.target.value; renderAlertTable(); });
+  document.getElementById('excRuleFilter').addEventListener('change', (e) => { STATE.excRule = e.target.value; renderAlertTable(); });
+  document.getElementById('excClearFilters').addEventListener('click', () => {
+    STATE.excSeverity = 'ALL'; STATE.excRule = 'ALL';
+    document.getElementById('excRuleFilter').value = 'ALL';
+    renderAlertTable();
+  });
+
+  document.getElementById('repairTagFilter').addEventListener('change', (e) => { STATE.repairTag = e.target.value; renderRepairZone(); });
+  document.getElementById('repairShopFilter').addEventListener('change', (e) => { STATE.repairShop = e.target.value; renderRepairZone(); });
+  document.getElementById('repairVehicleFilter').addEventListener('change', (e) => { STATE.repairVehicle = e.target.value; renderRepairZone(); });
+}
+
+function getRows(ym, bu) { return RAW.filter(r => r.ym === ym && (bu === 'ALL' || r.bu === bu)); }
+function destroyChart(id) { if (CHARTS[id]) { CHARTS[id].destroy(); delete CHARTS[id]; } }
+// Switches the visible zone panel — used by the top zone-tab bar and by
+// Zone 5's alert-row drill-down buttons (onclick="switchZoneTab('zonePanelN')").
+function switchZoneTab(panelId) {
+  document.querySelectorAll('.zone-tab').forEach(t => t.classList.toggle('active', t.getAttribute('data-zone') === panelId));
+  document.querySelectorAll('.zone-panel').forEach(p => p.classList.toggle('active', p.id === panelId));
+  document.getElementById('zone4FilterBar').classList.toggle('active', panelId === 'zonePanel4');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Groups rows by Route ID (the stable operational unit — a route keeps its
+// identity even when the physical vehicle serving it changes month to month).
+function byVeh(rows) {
+  const m = {};
+  rows.forEach(r => {
+    if (!m[r.routeId]) m[r.routeId] = { cashL: 0, creditL: 0, cashTHB: 0, creditTHB: 0, costTHB: 0, grossProfit: 0,
+      fuelDiff: 0, fuelRate: [], repairCost: 0, distanceKm: 0, fuelFilled: 0, trips: 0, targetLiters: 0, targetFuelRate: [], bu: r.bu, vehicle: r.vehicle, routeMissing: r.routeMissing };
+    const v = m[r.routeId];
+    v.cashL += r.cashL; v.creditL += r.creditL; v.cashTHB += r.cashTHB; v.creditTHB += r.creditTHB;
+    v.costTHB += r.costTHB; v.grossProfit += r.grossProfit; v.fuelDiff += r.fuelDiff;
+    if (r.fuelRate) v.fuelRate.push(r.fuelRate);
+    v.repairCost += r.repairCost; v.distanceKm += r.distanceKm; v.fuelFilled += r.fuelFilled; v.trips += r.trips;
+    v.targetLiters += r.targetLiters;
+    if (r.targetFuelRate) v.targetFuelRate.push(r.targetFuelRate);
+    if (v.vehicle !== r.vehicle) v.vehicle = v.vehicle + ' / ' + r.vehicle;
+  });
+  return m;
+}
+
+function setKpi(id, text) { document.getElementById(id).textContent = text; }
+function renderDelta(elId, curVal, prevVal, opts = {}) {
+  const el = document.getElementById(elId);
+  const label = opts.label || 'จากปีก่อน';
+  // noDataLabel lets a caller spell out what's missing (เดือนก่อน/ปีก่อน/
+  // ช่วงก่อนหน้า, ...); defaults to a generic phrase derived from opts.label.
+  const noDataLabel = opts.noDataLabel || (label.startsWith('จากเดือน') ? 'เดือนก่อน' : label.startsWith('จากช่วง') ? 'ช่วงก่อนหน้า' : 'ปีก่อน');
+  if (prevVal === null || prevVal === undefined) { el.innerHTML = `<span class="delta flat">ไม่มีข้อมูล${noDataLabel}</span>`; return; }
+  const gap = pct(curVal, prevVal);
+  if (gap === null) { el.innerHTML = `<span class="delta flat">ไม่มีข้อมูล${noDataLabel}</span>`; return; }
+  // opts.invert flips the good/bad color mapping — used for metrics where a
+  // decrease is the desirable direction (e.g. repair cost going down is good).
+  const isGood = opts.invert ? gap <= 0 : gap >= 0;
+  const dir = isGood ? 'up' : 'down';
+  el.innerHTML = `<span class="delta ${dir}">${gap >= 0 ? '▲' : '▼'} ${fmt(Math.abs(gap), 1)}% ${label}</span>`;
+}
+function sparkline(canvasId, data, color, c, opts = {}) {
+  destroyChart(canvasId);
+  CHARTS[canvasId] = new Chart(document.getElementById(canvasId), {
+    type: 'line',
+    data: { labels: data.map(() => ''), datasets: [{ data, borderColor: color, borderWidth: 2, pointRadius: 0, tension: 0.35, fill: !!opts.fill, backgroundColor: opts.fill ? color + '22' : undefined }] },
+    options: { responsive: true, maintainAspectRatio: false, scales: { x: { display: false }, y: { display: false } }, plugins: { legend: { display: false }, tooltip: { enabled: false } } },
+  });
+}
+
+function renderAll() {
+  const c = COLORS();
+  const fromYm = STATE.fromYm, toYm = STATE.toYm, bu = STATE.bu;
+  if (!fromYm || !toYm) return;
+  const months = monthsInRange(fromYm, toYm);
+  const [prevFromYm, prevToYm] = yoyShiftRange(fromYm, toYm);
+  const prevMonths = monthsInRange(prevFromYm, prevToYm);
+  const curRows = months.flatMap(m => getRows(m, bu));
+  const prevRows = prevMonths.flatMap(m => getRows(m, bu));
+
+  document.getElementById('ovTitle').textContent = `(${rangeLabel(fromYm, toYm)} เทียบ ${rangeLabel(prevFromYm, prevToYm)})`;
+  document.getElementById('vehTitle').textContent = `(${[...new Set(curRows.map(r => r.routeId))].length} เส้นทาง)`;
+
+  const curLiters = sum(curRows, 'cashL') + sum(curRows, 'creditL');
+  const prevLiters = sum(prevRows, 'cashL') + sum(prevRows, 'creditL');
+  const curGP = sum(curRows, 'grossProfit');
+  const prevGP = sum(prevRows, 'grossProfit');
+  const curFuelDiff = sum(curRows, 'fuelDiff');
+  const curFuelDiffPct = curLiters > 0 ? 100 * curFuelDiff / curLiters : 0;
+  const prevFuelDiff = sum(prevRows, 'fuelDiff');
+  const prevFuelDiffPct = prevLiters > 0 ? 100 * prevFuelDiff / prevLiters : null;
+  const curFuelRateAvg = avg(curRows.filter(r => r.fuelRate).map(r => r.fuelRate));
+  const prevFuelRateAvg = avg(prevRows.filter(r => r.fuelRate).map(r => r.fuelRate));
+
+  setKpi('kpiLiters', fmt(curLiters));
+  renderDelta('kpiLitersDelta', curLiters, prevLiters || null);
+  setKpi('kpiGP', fmt(curGP));
+  renderDelta('kpiGPDelta', curGP, prevGP || null);
+  setKpi('kpiFuelDiff', fmtSigned(curFuelDiffPct, 2));
+  const withinTol = Math.abs(curFuelDiffPct) <= FUEL_DIFF_TOLERANCE_PCT;
+  document.getElementById('kpiFuelDiffDelta').innerHTML = `<span class="delta ${withinTol ? 'up' : 'down'}">${withinTol ? '✓ อยู่ในเป้า' : '✗ นอกเป้า'} ±${FUEL_DIFF_TOLERANCE_PCT}%</span>`;
+  document.getElementById('kpiFuelDiffSub').textContent = prevFuelDiffPct !== null ? `ปีก่อน ${fmtSigned(prevFuelDiffPct, 2)}%` : '';
+  setKpi('kpiFuelRate', fmt(curFuelRateAvg, 2));
+  renderDelta('kpiFuelRateDelta', curFuelRateAvg, prevFuelRateAvg || null);
+
+  const curCashL = sum(curRows, 'cashL'), curCreditL = sum(curRows, 'creditL');
+  const curCashPct = curLiters > 0 ? 100 * curCashL / curLiters : 0;
+  const targetCashOverview = weightedTargetCashPct(curRows);
+  document.getElementById('cashCreditLabel').textContent = `${fmt(curCashPct, 0)}% : ${fmt(100 - curCashPct, 0)}%`;
+  const cashGap = curCashPct - targetCashOverview;
+  document.getElementById('cashCreditDelta').innerHTML = `<span class="delta ${cashGap >= 0 ? 'up' : 'down'}">${cashGap >= 0 ? '▲' : '▼'} ${cashGap >= 0 ? 'เกินเป้า' : 'ต่ำกว่าเป้า'} ${fmt(Math.abs(cashGap), 1)}%</span>`;
+
+  destroyChart('donut');
+  CHARTS.donut = new Chart(document.getElementById('cashCreditDonut'), {
+    type: 'doughnut',
+    data: { labels: ['เงินสด', 'เงินเชื่อ'], datasets: [{ data: [curCashL, curCreditL], backgroundColor: [c.s1, c.s3], borderWidth: 2, borderColor: c.surface }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { display: false }, tooltip: { backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1 } } },
+  });
+
+  // Sparklines now plot only the months inside the selected range (not a
+  // fixed trailing-12 window) — consistent with Zone 2's trend charts and
+  // Zone 4's YTD chart, both of which switched to the same "range months
+  // only" behavior.
+  const trailMonths = months;
+  const trailLitersArr = trailMonths.map(m => { const rs = getRows(m, bu); return sum(rs, 'cashL') + sum(rs, 'creditL'); });
+  const trailGPArr = trailMonths.map(m => sum(getRows(m, bu), 'grossProfit'));
+  const trailFuelRateArr = trailMonths.map(m => { const rs = getRows(m, bu).filter(r => r.fuelRate); return rs.length ? avg(rs.map(r => r.fuelRate)) : 0; });
+  const trailRepairArr = trailMonths.map(m => sum(getRows(m, bu), 'repairCost'));
+  sparkline('sparkLiters', trailLitersArr, c.s1, c);
+  sparkline('sparkGP', trailGPArr, c.good, c, { fill: true });
+  sparkline('sparkFuelRate', trailFuelRateArr, c.s4, c);
+  sparkline('sparkRepair', trailRepairArr, c.critical, c, { fill: true });
+
+  // Card 1 "% ของเป้า" — same targetLiters-based formula/thresholds already used
+  // per-route in Zone 3's sales cell (targetBulletCellHtml/salesCellHtml), just
+  // aggregated fleet-wide here.
+  const targetLitersTotal = sum(curRows, 'targetLiters');
+  const targetAchievePct = targetLitersTotal > 0 ? 100 * curLiters / targetLitersTotal : null;
+  const pillEl = document.getElementById('kpiLitersTargetPill');
+  if (targetAchievePct === null) {
+    pillEl.innerHTML = `<span class="target-pill" style="color:var(--text-muted);background:color-mix(in srgb, var(--text-muted) 12%, transparent);">ไม่มีเป้า</span>`;
+  } else {
+    const okColor = targetAchievePct >= 100 ? 'var(--good)' : (targetAchievePct >= 80 ? 'var(--series-2)' : 'var(--critical)');
+    const okIcon = targetAchievePct >= 100 ? '✓' : (targetAchievePct >= 80 ? '' : '✗');
+    pillEl.innerHTML = `<span class="target-pill" style="color:${okColor};background:color-mix(in srgb, ${okColor} 14%, transparent);">${okIcon} ${fmt(targetAchievePct, 1)}% ของเป้า</span>`;
+  }
+
+  // Card 6 "ค่าซ่อมบำรุงรวม" — same repairCost figure already summed per
+  // BU+month for Zone 3/4; compared period-over-period (not YoY like the
+  // other cards) since repair spend is noisy and a recent-period read is
+  // more actionable. Generalizes the old "MoM" comparison to "the equal-
+  // length period right before this one" now that the filter is a range.
+  const curRepairTotal = sum(curRows, 'repairCost');
+  const [prevPeriodFromYm, prevPeriodToYm] = prevPeriodShiftRange(fromYm, toYm);
+  const prevPeriodRepairTotal = sum(monthsInRange(prevPeriodFromYm, prevPeriodToYm).flatMap(m => getRows(m, bu)), 'repairCost');
+  setKpi('kpiRepairTotal', fmt(curRepairTotal, 2));
+  renderDelta('kpiRepairDelta', curRepairTotal, prevPeriodRepairTotal || null, { label: 'จากช่วงก่อนหน้า', invert: true });
+
+  const routeIds = [...new Set(curRows.map(r => r.routeId))];
+  const curByVeh = byVeh(curRows);
+  const prevByVeh = byVeh(prevRows);
+
+  const rowData = routeIds.map(rid => {
+    const cv = curByVeh[rid];
+    const litersCur = cv.cashL + cv.creditL;
+    const pv = prevByVeh[rid];
+    const litersPrev = pv ? pv.cashL + pv.creditL : null;
+    const pctYoY = litersPrev ? pct(litersCur, litersPrev) : null;
+    const fuelRateAvg = cv.fuelFilled > 0 ? cv.distanceKm / cv.fuelFilled : (cv.fuelRate.length ? avg(cv.fuelRate) : 0);
+    const fuelDiffPct = litersCur > 0 ? 100 * cv.fuelDiff / litersCur : 0;
+    const targetFuelRate = cv.targetFuelRate.length ? avg(cv.targetFuelRate) : null;
+    const cashPct = litersCur > 0 ? 100 * cv.cashL / litersCur : 0;
+    const targetCashPctForRoute = getTargetCashPct(cv.bu);
+    return {
+      routeId: rid, vehicle: cv.vehicle, bu: cv.bu, routeMissing: cv.routeMissing,
+      liters: litersCur, litersPrev,
+      pct: pctYoY,
+      targetLiters: cv.targetLiters,
+      targetAchievePct: cv.targetLiters > 0 ? 100 * litersCur / cv.targetLiters : null,
+      fuelDiff: cv.fuelDiff,
+      fuelDiffPct,
+      fuelDiffWithinTol: Math.abs(fuelDiffPct) <= FUEL_DIFF_TOLERANCE_PCT,
+      gp: cv.grossProfit,
+      gpPerLiter: litersCur > 0 ? cv.grossProfit / litersCur : 0,
+      costPerLiter: litersCur > 0 ? cv.costTHB / litersCur : 0,
+      repair: cv.repairCost,
+      fuelRate: fuelRateAvg,
+      targetFuelRate,
+      fuelRateGapPct: (targetFuelRate && targetFuelRate > 0) ? 100 * (fuelRateAvg - targetFuelRate) / targetFuelRate : null,
+      cashPct,
+      creditPct: litersCur > 0 ? 100 * cv.creditL / litersCur : 0,
+      targetCashPct: targetCashPctForRoute,
+      cashPctGap: cashPct - targetCashPctForRoute,
+      trips: cv.trips,
+    };
+  });
+  LAST_ROWDATA = rowData;
+
+  renderExceptions(rowData, c);
+  renderTable(rowData);
+  renderScatter(rowData, c);
+  renderTrips(curRows, c);
+  renderFuelDiffBig(rowData, c);
+  renderTrend(toYm, bu, c);
+  renderTop5(rowData, c);
+  renderRepairZone();
+  // Runs after renderExceptions() so FLAGGED_ROUTES is already populated for this month.
+  renderAlertBar(rowData);
+}
+
+// Quick Executive Alert Bar (Zone 1) — summarizes, in at most 3 lines, the
+// most important things to look at this month. Both signals are read from
+// numbers the dashboard already computes elsewhere (not new logic):
+//   1) how many routes are flagged in Zone 5 this month (FLAGGED_ROUTES,
+//      populated by renderExceptions() just above)
+//   2) whether any single vehicle's repair cost this month exceeds the same
+//      ฿10,000 warning threshold already used for the Zone 3/4 badges
+// When neither signal fires, shows a reassuring green "no issues" message
+// instead of hiding the bar (per user confirmation).
+function renderAlertBar(rowData) {
+  const el = document.getElementById('zone1AlertBar');
+  const lines = [];
+
+  const flaggedCount = FLAGGED_ROUTES.size;
+  if (flaggedCount > 0) {
+    lines.push(`<span class="tag">รายงานสภาวะ:</span>พบ <b>${flaggedCount} เส้นทาง</b> ติดรายการเฝ้าระวัง (ดูรายละเอียดที่ Zone 5)`);
+  }
+
+  let topRepair = { vehicle: '-', repair: 0 };
+  rowData.forEach(r => { if (r.repair > topRepair.repair) topRepair = { vehicle: r.vehicle, repair: r.repair }; });
+  if (topRepair.repair > REPAIR_COST_WARN_THB) {
+    lines.push(`รถทะเบียน <b>${escapeHtml(topRepair.vehicle)}</b> มีค่าซ่อมบำรุงสูงกว่าปกติเดือนนี้ — ฿${fmt(topRepair.repair, 2)} (เกณฑ์ ฿${fmt(REPAIR_COST_WARN_THB)})`);
+  }
+
+  if (!lines.length) {
+    el.classList.add('ok');
+    el.innerHTML = `<span class="icon">✅</span><div class="lines"><div><span class="tag">รายงานสภาวะ:</span>ไม่มีประเด็นสำคัญที่ต้องเฝ้าระวังเป็นพิเศษในเดือนนี้</div></div>`;
+    return;
+  }
+  el.classList.remove('ok');
+  el.innerHTML = `<span class="icon">⚠️</span><div class="lines">${lines.slice(0, 3).map(l => `<div>${l}</div>`).join('')}</div>`;
+}
+
+// ---------------------------------------------------------------------
+// Zone 5 — exception rules
+// ---------------------------------------------------------------------
+function renderExceptions(rowData, c) {
+  const alerts = [];
+  const withLiters = rowData.filter(r => r.liters > 0);
+
+  const repairVals = withLiters.map(r => r.repair);
+  const repMean = avg(repairVals), repSd = stddev(repairVals);
+  withLiters.filter(r => repSd > 0 && r.repair > repMean + 1.5 * repSd).sort((a, b) => b.repair - a.repair).forEach(r => {
+    alerts.push({ severity: 'critical', icon: '🔴', rule: 'ค่าซ่อมสูงผิดปกติ', routeId: r.routeId, vehicle: r.vehicle,
+      valueText: '฿' + fmt(r.repair), thresholdText: `ค่าเฉลี่ยกองรถ ฿${fmt(repMean)}` });
+  });
+
+  const gpVals = withLiters.map(r => r.gpPerLiter);
+  const gpMean = avg(gpVals), gpSd = stddev(gpVals);
+  withLiters.filter(r => r.gpPerLiter < 0 || (gpSd > 0 && r.gpPerLiter < gpMean - 1.5 * gpSd)).sort((a, b) => a.gpPerLiter - b.gpPerLiter).forEach(r => {
+    alerts.push({
+      severity: r.gpPerLiter < 0 ? 'critical' : 'warning',
+      icon: r.gpPerLiter < 0 ? '🔴' : '⚠️',
+      rule: 'กำไรขั้นต้น/ลิตรต่ำผิดปกติ', routeId: r.routeId, vehicle: r.vehicle,
+      valueText: fmt(r.gpPerLiter, 2) + ' บาท/ล.',
+      thresholdText: r.gpPerLiter < 0 ? 'ติดลบ' : `ต่ำกว่าค่าเฉลี่ยกองรถอย่างมีนัยสำคัญ`,
+    });
+  });
+
+  withLiters.filter(r => r.pct !== null && r.pct <= -15).sort((a, b) => a.pct - b.pct).forEach(r => {
+    alerts.push({ severity: 'serious', icon: '🟠', rule: 'ยอดขายหดตัวจากปีก่อน', routeId: r.routeId, vehicle: r.vehicle,
+      valueText: fmt(r.pct, 1) + '%', thresholdText: 'หดตัวมากกว่า 15%' });
+  });
+
+  withLiters.filter(r => !r.fuelDiffWithinTol).sort((a, b) => Math.abs(b.fuelDiffPct) - Math.abs(a.fuelDiffPct)).forEach(r => {
+    alerts.push({ severity: r.fuelDiffPct < -1 ? 'critical' : 'warning', icon: r.fuelDiffPct < -1 ? '🔴' : '⚠️',
+      rule: 'น้ำมันขาด/เกินนอกเป้า', routeId: r.routeId, vehicle: r.vehicle,
+      valueText: fmtSigned(r.fuelDiffPct, 2) + '%', thresholdText: `เกณฑ์ ±${FUEL_DIFF_TOLERANCE_PCT}%` });
+  });
+
+  const fuelRateVals = withLiters.map(r => r.fuelRate).filter(v => v > 0);
+  const fuelRateMed = median(fuelRateVals);
+  withLiters.filter(r => r.fuelRate > 0 && fuelRateMed > 0 && r.fuelRate < fuelRateMed * 0.8).sort((a, b) => a.fuelRate - b.fuelRate).forEach(r => {
+    alerts.push({ severity: 'warning', icon: '⚠️', rule: 'อัตราการใช้น้ำมันต่ำกว่ากองรถ', routeId: r.routeId, vehicle: r.vehicle,
+      valueText: fmt(r.fuelRate, 2) + ' กม./ล.', thresholdText: `ค่ามัธยฐานกองรถ ${fmt(fuelRateMed, 2)} กม./ล.` });
+  });
+
+  const order = { critical: 0, serious: 1, warning: 2 };
+  alerts.sort((a, b) => order[a.severity] - order[b.severity]);
+
+  document.getElementById('excTitle').textContent = `(${alerts.length} รายการ)`;
+  FLAGGED_ROUTES = new Set(alerts.map(a => a.routeId));
+  LAST_ALERTS = alerts;
+
+  document.getElementById('sevCountAll').textContent = alerts.length;
+  document.getElementById('sevCountCritical').textContent = alerts.filter(a => a.severity === 'critical').length;
+  document.getElementById('sevCountSerious').textContent = alerts.filter(a => a.severity === 'serious').length;
+  document.getElementById('sevCountWarning').textContent = alerts.filter(a => a.severity === 'warning').length;
+
+  // Rule-type filter options — built from the rule names actually present this
+  // month (rather than a hardcoded list) so the dropdown never shows an empty option.
+  const ruleFilterEl = document.getElementById('excRuleFilter');
+  const ruleNames = [...new Set(alerts.map(a => a.rule))];
+  if (ruleFilterEl.dataset.count != ruleNames.length) {
+    const keepValue = ruleNames.includes(STATE.excRule) ? STATE.excRule : 'ALL';
+    ruleFilterEl.innerHTML = '<option value="ALL">ทุกประเภทปัญหา</option>' +
+      ruleNames.map(r => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('');
+    STATE.excRule = keepValue;
+    ruleFilterEl.value = keepValue;
+    ruleFilterEl.dataset.count = ruleNames.length;
+  }
+
+  renderAlertTable();
+}
+let FLAGGED_ROUTES = new Set();
+let LAST_ALERTS = [];
+
+// Each rule type drills down to whichever zone shows that data in most detail
+// (confirmed with the user): ค่าซ่อมสูงผิดปกติ→Zone4, กำไรขั้นต้น/ลิตรต่ำ→Zone3,
+// ยอดขายหดตัว→Zone2, น้ำมันขาด/เกิน→Zone3, อัตราการใช้น้ำมันต่ำ→Zone2.
+// Zone 2's charts now live merged into Zone 1's panel (below the KPI cards),
+// so any "Zone 2" drill-down target points at zonePanel1, not a separate tab.
+const RULE_DRILL = {
+  'ค่าซ่อมสูงผิดปกติ': { zone: 'zonePanel4', label: 'ดูค่าซ่อม' },
+  'กำไรขั้นต้น/ลิตรต่ำผิดปกติ': { zone: 'zonePanel3', label: 'ดูผลประกอบการ' },
+  'ยอดขายหดตัวจากปีก่อน': { zone: 'zonePanel1', label: 'ดูแนวโน้ม' },
+  'น้ำมันขาด/เกินนอกเป้า': { zone: 'zonePanel3', label: 'ดูยอดขาย' },
+  'อัตราการใช้น้ำมันต่ำกว่ากองรถ': { zone: 'zonePanel1', label: 'ดูประสิทธิภาพ' },
+};
+const EXC_SEV_LABEL = { critical: 'วิกฤต', serious: 'ต้องดู', warning: 'เฝ้าระวัง' };
+
+function renderAlertTable() {
+  const sevFilter = STATE.excSeverity || 'ALL';
+  const ruleFilter = STATE.excRule || 'ALL';
+  const filtered = LAST_ALERTS.filter(a => (sevFilter === 'ALL' || a.severity === sevFilter) && (ruleFilter === 'ALL' || a.rule === ruleFilter));
+
+  document.querySelectorAll('.sev-pill').forEach(p => p.classList.toggle('active', p.getAttribute('data-sev') === sevFilter));
+  document.getElementById('excSeverityFilter').value = sevFilter;
+
+  const table = document.getElementById('alertTable');
+  const emptyEl = document.getElementById('alertEmptyState');
+  emptyEl.style.display = filtered.length ? 'none' : 'block';
+  emptyEl.textContent = LAST_ALERTS.length ? 'ไม่พบรายการที่ตรงกับตัวกรอง' : 'ไม่พบจุดที่ต้องเฝ้าระวังในเดือนนี้';
+  table.innerHTML = filtered.map(a => {
+    const drill = RULE_DRILL[a.rule] || { zone: 'zonePanel3', label: 'ดูรายละเอียด' };
+    return `
+    <div class="alert-row ${a.severity}">
+      <div><span class="sev-badge">${a.icon} ${EXC_SEV_LABEL[a.severity]}</span></div>
+      <div class="issue-title">${escapeHtml(a.rule)}</div>
+      <div class="target-subject"><b>${escapeHtml(a.routeId)}</b><br>(${escapeHtml(a.vehicle)})</div>
+      <div class="actual-value ${a.severity}">${escapeHtml(a.valueText)}</div>
+      <div class="benchmark-text">${escapeHtml(a.thresholdText)}</div>
+      <div><button class="drill-btn" onclick="switchZoneTab('${drill.zone}')">${drill.label} →</button></div>
+    </div>`;
+  }).join('');
+}
+
+// ---------------------------------------------------------------------
+// Zone 3a — Unified performance table with in-cell mini visualizations
+// ---------------------------------------------------------------------
+function barCellHtml(value, max, color, label) {
+  const w = max > 0 ? Math.max(2, Math.min(100, 100 * Math.abs(value) / max)) : 0;
+  return `<div class="cell-flex"><div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${color}"></div></div><div class="cell-label">${label}</div></div>`;
+}
+// Merged "ยอดขาย & ผลต่างน้ำมัน (Sales & Fuel Variance)" cell — combines the
+// liters-sold cell and the fuel-diff-% cell into one, per the approved mockup.
+// No bars/markers (dropped for a cleaner scan); the fuel-variance badge uses 3
+// tiers off FUEL_DIFF_TOLERANCE_PCT: within it is "ปกติ" (green ✓), up to 2x it
+// is "เฝ้าระวัง" (orange ⚠), beyond that is "วิกฤต" (solid red ⚠️). The 2x
+// multiplier is a reasonable step beyond the configured tolerance and can be
+// tuned in FUEL_DIFF_CRITICAL_MULTIPLIER below without touching the Config tab.
+const FUEL_DIFF_CRITICAL_MULTIPLIER = 2;
+// Only the genuinely severe tier gets a solid badge+icon; ปกติ/เฝ้าระวัง render
+// as plain semantic-colored text (per the low-noise redesign) so the table only
+// pulls the eye where something actually needs attention.
+function fuelVarianceBadgeHtml(fuelDiffPct, tolerancePct) {
+  const absVal = Math.abs(fuelDiffPct);
+  const text = fmtSigned(fuelDiffPct, 2) + '%';
+  if (absVal <= tolerancePct) return `<span style="color:var(--good);font-weight:700;">${text}</span>`;
+  if (absVal <= tolerancePct * FUEL_DIFF_CRITICAL_MULTIPLIER) return `<span style="color:var(--series-2);font-weight:700;">${text}</span>`;
+  return `<span class="verdict critical">⚠️ ${text}</span>`;
+}
+function salesCellHtml(liters, litersPrev, targetLiters, targetAchievePct, pctYoY, fuelDiffPct, c) {
+  const yoyText = pctYoY === null
+    ? `<span style="color:var(--text-muted);">ไม่มีข้อมูลปีก่อน</span>`
+    : `<span style="color:${pctYoY >= 0 ? 'var(--good)' : 'var(--critical)'};font-weight:600;">${pctYoY >= 0 ? '▲' : '▼'} ${fmt(Math.abs(pctYoY), 1)}% จากปีก่อน</span>`;
+  const targetText = targetAchievePct === null
+    ? `<span style="color:var(--text-muted);">ไม่มีเป้า</span>`
+    : `<span style="color:${targetAchievePct >= 100 ? 'var(--good)' : (targetAchievePct >= 80 ? 'var(--series-2)' : 'var(--critical)')};font-weight:600;">${fmt(targetAchievePct, 1)}% ของเป้า</span>`;
+  return `<div class="cell-flex">
+    <div class="stack-row"><span class="text-primary-strong">${fmt(liters)} ลิตร</span> ${fuelVarianceBadgeHtml(fuelDiffPct, FUEL_DIFF_TOLERANCE_PCT)}</div>
+    <div class="cell-label">${yoyText} &nbsp;·&nbsp; ${targetText}</div>
+  </div>`;
+}
+function targetBulletCellHtml(actual, target, max, color, unit = '', decimals = 2) {
+  const w = max > 0 ? Math.max(2, Math.min(100, 100 * actual / max)) : 0;
+  const markerPos = (target !== null && target !== undefined && max > 0) ? Math.max(0, Math.min(100, 100 * target / max)) : null;
+  const marker = markerPos !== null ? `<div class="bar-marker" style="left:${markerPos}%"></div>` : '';
+  const targetLabel = (target !== null && target !== undefined) ? ` · เป้า ${fmt(target, decimals)}${unit}` : ' · ไม่มีเป้า';
+  return `<div class="cell-flex"><div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${color}"></div>${marker}</div><div class="cell-label">${fmt(actual, decimals)}${unit}${targetLabel}</div></div>`;
+}
+// Merged "ผลประกอบการกำไร (Financials)" cell — combines total gross profit with
+// the per-liter price/cost/profit breakdown as plain text (no bar/sparkline, per
+// the approved mockup, to keep the table clean). กำไร/ลิตร is highlighted green
+// when healthy (>= 1.50 บ./ล., adjustable) or orange when thin but still positive;
+// red if the route is actually losing money per liter.
+const GP_PER_LITER_HEALTHY = 1.50;
+// Primary line = total gross profit; secondary line shows only กำไร/ลิตร (the
+// figure people actually scan for), with ราคาขาย/ลิตร and ต้นทุน/ลิตร moved
+// into a hover tooltip (native title attr) instead of cluttering the row.
+function financialsCellHtml(gp, costPerLiter, gpPerLiter) {
+  const sellPerLiter = costPerLiter + gpPerLiter;
+  const gplColor = gpPerLiter < 0 ? 'var(--critical)' : (gpPerLiter >= GP_PER_LITER_HEALTHY ? 'var(--good)' : 'var(--series-2)');
+  const tooltip = `ราคาขาย/ลิตร ฿${fmt(sellPerLiter, 2)} · ต้นทุน/ลิตร ฿${fmt(costPerLiter, 2)}`;
+  return `<div class="cell-flex">
+    <div class="text-primary-strong">฿${fmt(gp)}</div>
+    <div class="cell-label"><span class="hint-underline" title="${escapeHtml(tooltip)}">กำไร <b style="color:${gplColor}">฿${fmt(gpPerLiter, 2)}</b>/ล.</span></div>
+  </div>`;
+}
+// Merged "ค่าซ่อม & ประสิทธิภาพน้ำมัน (Maintenance & Efficiency)" cell — no
+// bar/sparkline. ยอดค่าซ่อม > ฿10,000 renders as bold red text with a ⚠️ icon
+// (no solid pill background, per the low-noise redesign); the fuel-rate line
+// colors green/red against its per-route target when one exists.
+const REPAIR_COST_WARN_THB = 10000;
+function maintenanceCellHtml(repair, fuelRate, targetFuelRate) {
+  const hot = repair > REPAIR_COST_WARN_THB;
+  const repairLine = hot
+    ? `<div><span style="font-weight:800;color:var(--critical);">⚠️ ฿${fmt(repair)}</span></div>`
+    : `<div class="text-primary-strong">฿${fmt(repair)}</div>`;
+  let fuelLine;
+  if (targetFuelRate !== null && targetFuelRate !== undefined && targetFuelRate > 0) {
+    const good = fuelRate >= targetFuelRate;
+    fuelLine = `<div class="cell-label">อัตราสิ้นเปลือง <b style="color:${good ? 'var(--good)' : 'var(--critical)'}">${fmt(fuelRate, 2)}</b> กม./ล. · เทียบเป้า <span style="color:var(--text-muted);">${fmt(targetFuelRate, 2)}</span> กม./ล.</div>`;
+  } else {
+    fuelLine = `<div class="cell-label">อัตราสิ้นเปลือง ${fmt(fuelRate, 2)} กม./ล. · ไม่มีเป้า</div>`;
+  }
+  return `<div class="cell-flex">${repairLine}${fuelLine}</div>`;
+}
+// Cash-target gap is a plain percentage-POINT difference (cashPct - targetCashPct),
+// so it is mathematically bounded to roughly ±100 already. As a guard against a
+// bad/corrupted value in the Targets sheet ever producing an absurd number like
+// "1,966.7%", anything outside a sane ±100pt range is treated as "ไม่มีเป้า"
+// rather than displayed as-is.
+const CASH_GAP_SANITY_LIMIT = 100;
+function cashCreditCellHtml(cashPct, creditPct, targetCashPct, cashPctGap, c) {
+  const ratioText = `<div class="text-primary-strong" style="text-align:center;">${fmt(cashPct, 0)}% : ${fmt(creditPct, 0)}%</div>`;
+  let verdict = '';
+  if (targetCashPct != null && Math.abs(cashPctGap) <= CASH_GAP_SANITY_LIMIT) {
+    const good = cashPctGap >= 0;
+    verdict = `<div class="cell-label" style="text-align:center;"><span style="color:${good ? 'var(--good)' : 'var(--critical)'};font-weight:600;">${good ? '▲' : '▼'} เงินสด${good ? 'เกินเป้า' : 'ต่ำกว่าเป้า'} ${fmt(Math.abs(cashPctGap), 1)}%</span></div>`;
+  } else {
+    verdict = `<div class="cell-label" style="text-align:center;color:var(--text-muted);">ไม่มีเป้า</div>`;
+  }
+  return `<div class="cell-flex">${ratioText}${verdict}</div>`;
+}
+
+function renderTable(rowData) {
+  const c = COLORS();
+  let rows = rowData.slice();
+
+  const key = STATE.sortKey, dir = STATE.sortDir === 'asc' ? 1 : -1;
+  const sortVal = (r) => {
+    if (key === 'routeId') return r.routeId;
+    return r[key];
+  };
+  rows = [...rows].sort((a, b) => {
+    const va = sortVal(a), vb = sortVal(b);
+    if (typeof va === 'string') return va.localeCompare(vb) * dir;
+    return (va - vb) * dir;
+  });
+
+  document.querySelectorAll('#unifiedTable thead th').forEach(th => {
+    th.classList.toggle('sorted', th.getAttribute('data-key') === key);
+    const arrow = th.querySelector('.sort-arrow');
+    if (th.getAttribute('data-key') === key) arrow.textContent = dir === 1 ? '↑' : '↓'; else arrow.textContent = '↕';
+  });
+
+  const tbody = document.querySelector('#unifiedTable tbody');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px;">ไม่พบ Route ID/รถที่ตรงกับคำค้นหา</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r => `
+    <tr class="${FLAGGED_ROUTES.has(r.routeId) ? 'flagged' : ''}">
+      <td><div class="veh-cell"><span class="bu-badge">${escapeHtml(r.bu)}</span><div class="cell-flex"><strong>${escapeHtml(r.routeId)}${r.routeMissing ? ' <span style="color:var(--text-muted);font-weight:400;">(ไม่มี Route ID)</span>' : ''}</strong><span class="cell-label">${escapeHtml(r.vehicle)}</span></div></div></td>
+      <td>${salesCellHtml(r.liters, r.litersPrev, r.targetLiters, r.targetAchievePct, r.pct, r.fuelDiffPct, c)}</td>
+      <td>${financialsCellHtml(r.gp, r.costPerLiter, r.gpPerLiter)}</td>
+      <td>${maintenanceCellHtml(r.repair, r.fuelRate, r.targetFuelRate)}</td>
+      <td>${cashCreditCellHtml(r.cashPct, r.creditPct, r.targetCashPct, r.cashPctGap, c)}</td>
+    </tr>
+  `).join('');
+}
+
+// ---------------------------------------------------------------------
+// Zone 2 — Focus charts ("Modern Vibrant" redesign — intentionally more
+// colorful than the rest of the dashboard; see .zone2-vibrant in <style>)
+// ---------------------------------------------------------------------
+const Z2_COLORS = { blue: '#2563eb', cyan: '#06b6d4', emerald: '#10b981', indigo: '#6366f1', coral: '#fb7185', coralLight: '#fecdd3' };
+// Shared glassmorphism tooltip (external, so we can blur/round it like the
+// approved mockup — Chart.js's built-in tooltip can't do backdrop-filter).
+function z2ExternalTooltip(context) {
+  const { chart, tooltip } = context;
+  const el = document.getElementById('z2Tooltip');
+  if (tooltip.opacity === 0) { el.style.opacity = 0; return; }
+  const dp = (tooltip.dataPoints || []).filter(d => d.dataset.z2Skip !== true);
+  if (!dp.length) { el.style.opacity = 0; return; }
+  let html = `<div class="tt-title">${escapeHtml(String(tooltip.title[0] || ''))}</div>`;
+  dp.forEach(d => {
+    const color = d.dataset.borderColor || d.dataset.backgroundColor || '#666';
+    html += `<div class="tt-row"><span class="tt-dot" style="background:${typeof color === 'string' ? color : '#666'};"></span>${d.dataset.z2Label ? escapeHtml(d.dataset.z2Label(d)) : escapeHtml(d.formattedValue)}</div>`;
+  });
+  el.innerHTML = html;
+  const canvasRect = chart.canvas.getBoundingClientRect();
+  el.style.opacity = 1;
+  el.style.left = (canvasRect.left + tooltip.caretX + 12) + 'px';
+  el.style.top = (canvasRect.top + tooltip.caretY - 10) + 'px';
+}
+function z2VGradient(ctx, area, colorTop, colorBottom) {
+  const g = ctx.createLinearGradient(0, area.top, 0, area.bottom);
+  g.addColorStop(0, colorTop); g.addColorStop(1, colorBottom);
+  return g;
+}
+const z2GridStyle = (c) => ({ color: c.grid, borderDash: [4, 4] });
+
+// Background shading for the two quadrants the spec calls out — critical
+// (high repair cost + fuel rate below target) in red, bottom-right; high
+// performance (low repair cost + fuel rate above target) in green,
+// top-left. The other two quadrants are intentionally left unshaded since
+// the spec didn't assign them a meaning.
+function z2QuadrantShadingPlugin(repairAvg, fuelRateAvg) {
+  return {
+    id: 'z2QuadrantShading',
+    beforeDatasetsDraw(chart) {
+      const { ctx, chartArea, scales } = chart;
+      if (!chartArea) return;
+      const xMid = scales.x.getPixelForValue(repairAvg);
+      const yMid = scales.y.getPixelForValue(fuelRateAvg);
+      ctx.save();
+      ctx.fillStyle = 'rgba(239,68,68,0.08)';
+      ctx.fillRect(xMid, yMid, chartArea.right - xMid, chartArea.bottom - yMid);
+      ctx.fillStyle = 'rgba(16,185,129,0.08)';
+      ctx.fillRect(chartArea.left, chartArea.top, xMid - chartArea.left, yMid - chartArea.top);
+      ctx.restore();
+    },
+  };
+}
+// Dashed average/target reference lines (vertical = avg repair cost of the
+// routes currently shown, horizontal = avg of each route's own Target Fuel
+// Rate) plus their value labels along the chart edges.
+function z2QuadrantRefLinesPlugin(repairAvg, fuelRateAvg) {
+  return {
+    id: 'z2QuadrantRefLines',
+    afterDraw(chart) {
+      const { ctx, chartArea, scales } = chart;
+      if (!chartArea) return;
+      const xPix = scales.x.getPixelForValue(repairAvg);
+      const yPix = scales.y.getPixelForValue(fuelRateAvg);
+      ctx.save();
+      ctx.strokeStyle = '#898781'; ctx.setLineDash([5, 5]); ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(xPix, chartArea.top); ctx.lineTo(xPix, chartArea.bottom); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(chartArea.left, yPix); ctx.lineTo(chartArea.right, yPix); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = '600 10.5px Prompt, sans-serif'; ctx.fillStyle = '#52514e';
+      ctx.textAlign = 'center';
+      ctx.fillText(`ค่าเฉลี่ยค่าซ่อม ฿${fmt(repairAvg)}`, xPix, chartArea.top - 2);
+      ctx.textAlign = 'left';
+      ctx.fillText(`เป้าเฉลี่ย ${fmt(fuelRateAvg, 2)} กม./ล.`, chartArea.left + 4, yPix - 6);
+      ctx.restore();
+    },
+  };
+}
+// Zone labels drawn once in the corners of the two shaded quadrants.
+const z2QuadrantZoneLabelsPlugin = {
+  id: 'z2QuadrantZoneLabels',
+  afterDraw(chart) {
+    const { ctx, chartArea } = chart;
+    if (!chartArea) return;
+    ctx.save();
+    ctx.font = '700 12px Prompt, sans-serif';
+    ctx.fillStyle = '#b91c1c'; ctx.textAlign = 'right';
+    ctx.fillText('🔴 โซนต้องปรับปรุง/วิกฤต', chartArea.right - 8, chartArea.bottom - 10);
+    ctx.fillStyle = '#047857'; ctx.textAlign = 'left';
+    ctx.fillText('🟢 โซนประสิทธิภาพสูง', chartArea.left + 8, chartArea.top + 16);
+    ctx.restore();
+  },
+};
+// Always-on Route ID labels beside each bubble (no hover needed).
+const z2RouteLabelsPlugin = {
+  id: 'z2RouteLabels',
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    ctx.save();
+    ctx.font = '600 10.5px Prompt, sans-serif';
+    ctx.fillStyle = '#334155';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    chart.data.datasets.forEach((ds, dsIdx) => {
+      const meta = chart.getDatasetMeta(dsIdx);
+      meta.data.forEach((point, i) => {
+        const d = ds.data[i];
+        ctx.fillText(d.routeId, point.x + point.options.radius + 4, point.y);
+      });
+    });
+    ctx.restore();
+  },
+};
+function renderScatter(rowData, c) {
+  destroyChart('scatter');
+  document.getElementById('z2BadgeScatter').textContent = `${rowData.length} เส้นทาง`;
+  const bus = [...new Set(rowData.map(r => r.bu))];
+  const bubbleColors = [Z2_COLORS.blue, Z2_COLORS.coral, Z2_COLORS.emerald, Z2_COLORS.indigo];
+  const maxLiters = Math.max(1, ...rowData.map(r => r.liters));
+  // Reference lines/quadrants: X = avg repair cost of the routes currently
+  // shown (reacts to the BU/range filters automatically); Y = avg of each
+  // route's own Target Fuel Rate (routes can have different targets, so
+  // this isn't a single hardcoded number like 3.70).
+  const repairAvg = avg(rowData.map(r => r.repair));
+  const targetFuelRates = rowData.map(r => r.targetFuelRate).filter(v => v !== null && v !== undefined && v > 0);
+  const fuelRateAvg = targetFuelRates.length ? avg(targetFuelRates) : avg(rowData.map(r => r.fuelRate));
+  CHARTS.scatter = new Chart(document.getElementById('scatterChart'), {
+    type: 'bubble',
+    data: { datasets: bus.map((bu, i) => ({
+      label: bu,
+      data: rowData.filter(r => r.bu === bu).map(r => ({ x: r.repair, y: r.fuelRate, r: 4 + 14 * Math.sqrt(r.liters / maxLiters), routeId: r.routeId, vehicle: r.vehicle })),
+      backgroundColor: color_mix_alpha(bubbleColors[i % bubbleColors.length], 0.70),
+      borderColor: bubbleColors[i % bubbleColors.length], borderWidth: 1.5,
+      z2Label: (dp) => { const d = dp.raw; return `ค่าซ่อม ฿${fmt(d.x)} · ${fmt(d.y, 2)} กม./ล.`; },
+    })) },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { right: 60, top: 12 } },
+      scales: {
+        x: { title: { display: true, text: 'ค่าซ่อม (฿)', color: c.muted }, ticks: { color: c.muted }, grid: z2GridStyle(c) },
+        y: { title: { display: true, text: 'อัตราการใช้น้ำมัน (กม./ล.)', color: c.muted }, ticks: { color: c.muted }, grid: z2GridStyle(c) },
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { color: c.textSecondary } },
+        tooltip: {
+          enabled: false, external: z2ExternalTooltip,
+          callbacks: { title: (items) => { const d = items[0].raw; return `${d.routeId} (${d.vehicle})`; } },
+        },
+      },
+    },
+    plugins: [
+      z2QuadrantShadingPlugin(repairAvg, fuelRateAvg),
+      z2QuadrantZoneLabelsPlugin,
+      z2RouteLabelsPlugin,
+      z2QuadrantRefLinesPlugin(repairAvg, fuelRateAvg),
+    ],
+  });
+}
+// Palette used to color trips-chart bars by vehicle (cycled by a simple
+// string hash so the same vehicle plate always lands on the same color
+// within one render, without needing a fixed vehicle->color registry).
+const TRIPS_VEHICLE_PALETTE = ['#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#fb7185', '#8b5cf6', '#14b8a6', '#2563eb'];
+function tripsVehicleColor(vehicle) {
+  let h = 0;
+  for (let i = 0; i < vehicle.length; i++) h = (h * 31 + vehicle.charCodeAt(i)) >>> 0;
+  return TRIPS_VEHICLE_PALETTE[h % TRIPS_VEHICLE_PALETTE.length];
+}
+// Value-label plugin for the trips chart: plain integer centered just
+// above each vertical bar (trip counts are small whole numbers, so no
+// M/k abbreviation is needed here).
+const tripsValueLabelsPlugin = {
+  id: 'tripsValueLabels',
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    const meta = chart.getDatasetMeta(0);
+    const data = chart.data.datasets[0].data;
+    ctx.save();
+    ctx.font = '600 11px Prompt, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#334155';
+    meta.data.forEach((bar, i) => { ctx.fillText(String(data[i]), bar.x, bar.y - 8); });
+    ctx.restore();
+  },
+};
+function renderTrips(curRows, c) {
+  destroyChart('tripsChart');
+  // Group by Route ID + รถ (not just Route ID) so a route that used more
+  // than one vehicle within the selected range shows as separate bars —
+  // summed across every month in the range, same as the rest of Zone 2/3.
+  const groups = {};
+  curRows.forEach(r => {
+    const key = r.routeId + '||' + r.vehicle;
+    if (!groups[key]) groups[key] = { routeId: r.routeId, vehicle: r.vehicle, trips: 0 };
+    groups[key].trips += r.trips;
+  });
+  const bars = Object.values(groups).filter(b => b.trips > 0).sort((a, b) => b.trips - a.trips);
+  document.getElementById('z2BadgeTrips').textContent = bars.length ? `สูงสุด: ${bars[0].routeId} (${bars[0].vehicle})` : '-';
+  const labels = bars.map(b => [b.routeId, b.vehicle]);
+  const data = bars.map(b => b.trips);
+  CHARTS.tripsChart = new Chart(document.getElementById('tripsChart'), {
+    type: 'bar',
+    data: { labels, datasets: [{
+      label: 'จำนวนเที่ยววิ่ง', data, borderRadius: 8, borderSkipped: false, barPercentage: 0.7, categoryPercentage: 0.75,
+      backgroundColor: bars.map(b => tripsVehicleColor(b.vehicle)),
+      z2Label: (dp) => `${fmt(dp.raw)} เที่ยว`,
+    }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 22 } },
+      scales: { x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } }, y: { grid: z2GridStyle(c), ticks: { color: c.muted, font: { size: 12 } }, border: { display: false } } },
+      plugins: { legend: { display: false }, tooltip: { enabled: false, external: z2ExternalTooltip } },
+    },
+    plugins: [tripsValueLabelsPlugin],
+  });
+}
+// Top 5 routes by sales liters / gross profit, totaled across the whole
+// selected month-range (same per-route totals already computed into
+// rowData for Zone 3's table — not a per-month breakdown), respecting the
+// current BU filter (rowData is already filtered to it upstream).
+function renderTop5(rowData, c) {
+  renderTop5Chart('top5Liters', rowData, c, 'liters', Z2_COLORS.cyan, (v) => fmtAbbrevMK(v) + ' ลิตร');
+  renderTop5Chart('top5GP', rowData, c, 'gp', Z2_COLORS.emerald, (v) => fmtAbbrevMK(v, '฿'));
+}
+function renderTop5Chart(canvasId, rowData, c, field, color, tooltipFmt) {
+  destroyChart(canvasId);
+  const top5 = [...rowData].sort((a, b) => b[field] - a[field]).slice(0, 5);
+  const labels = top5.map(r => r.routeId);
+  const data = top5.map(r => r[field]);
+  CHARTS[canvasId] = new Chart(document.getElementById(canvasId), {
+    type: 'bar',
+    data: { labels, datasets: [{
+      data, borderRadius: 8, maxBarThickness: 34, barPercentage: 0.7, categoryPercentage: 0.75,
+      backgroundColor: (ctx) => { const { chartArea } = ctx.chart; if (!chartArea) return color;
+        const g = ctx.chart.ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
+        g.addColorStop(0, color_mix_alpha(color, 0.55)); g.addColorStop(1, color_mix_alpha(color, 0.95)); return g; },
+      z2Label: (dp) => tooltipFmt(dp.raw),
+    }] },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      layout: { padding: { right: 38 } },
+      scales: {
+        x: { grid: z2GridStyle(c), ticks: { color: c.muted, font: { size: 11 }, callback: (v) => fmtAbbrevMK(v) } },
+        y: { grid: { display: false }, ticks: { color: c.textSecondary, font: { size: 12, weight: '600' } } },
+      },
+      plugins: { legend: { display: false }, tooltip: { enabled: false, external: z2ExternalTooltip } },
+    },
+    plugins: [top5ValueLabelsPlugin((v) => fmtAbbrevMK(v))],
+  });
+}
+// Background reference-zone plugin for the fuel-diff chart: one shaded
+// rectangle spanning the tolerance band (±FUEL_DIFF_TOLERANCE_PCT) across the
+// full chart height, drawn behind the bars — replaces the old two-dataset
+// ("skip" bars) approach with a single flat band.
+function z2ReferenceZonePlugin(toleranceColor, tolerance) {
+  return {
+    id: 'z2ReferenceZone_' + Math.random().toString(36).slice(2),
+    beforeDatasetsDraw(chart) {
+      const { ctx, chartArea, scales } = chart;
+      if (!chartArea) return;
+      const xScale = scales.x;
+      const left = xScale.getPixelForValue(-tolerance);
+      const right = xScale.getPixelForValue(tolerance);
+      ctx.save();
+      ctx.fillStyle = toleranceColor;
+      ctx.fillRect(left, chartArea.top, right - left, chartArea.bottom - chartArea.top);
+      ctx.restore();
+    },
+  };
+}
+// Value-label plugin for the fuel-diff chart: the real % figure anchored to
+// the open end of each bar (right of a positive bar, left of a negative
+// one), with a small ⚠️ marker on any route outside tolerance.
+function z2FuelDiffLabelsPlugin(data, tolerance, criticalColor, inRangeColor) {
+  return {
+    id: 'z2FuelDiffLabels_' + Math.random().toString(36).slice(2),
+    afterDatasetsDraw(chart) {
+      const { ctx, chartArea } = chart;
+      if (!chartArea) return;
+      const meta = chart.getDatasetMeta(0);
+      ctx.save();
+      ctx.font = '700 11.5px -apple-system, "Segoe UI", sans-serif';
+      ctx.textBaseline = 'middle';
+      meta.data.forEach((bar, i) => {
+        const val = data[i];
+        const isNeg = val < 0;
+        const label = (val >= 0 ? '+' : '') + val.toFixed(2) + '%' + (val <= -tolerance ? '  ⚠️' : '');
+        ctx.fillStyle = val <= -tolerance ? criticalColor : (val < 0 ? inRangeColor : '#0b0b0b');
+        ctx.textAlign = isNeg ? 'right' : 'left';
+        ctx.fillText(label, bar.x + (isNeg ? -8 : 8), bar.y);
+      });
+      ctx.restore();
+    },
+  };
+}
+function renderFuelDiffBig(rowData, c) {
+  destroyChart('fuelDiffBig');
+  const sorted = [...rowData].sort((a, b) => a.fuelDiffPct - b.fuelDiffPct);
+  if (sorted.length) document.getElementById('z2BadgeFuelDiff').textContent = `แย่สุด: ${fmtSigned(sorted[0].fuelDiffPct, 1)}%`;
+  const labels = sorted.map(r => r.routeId);
+  const data = sorted.map(r => r.fuelDiffPct);
+  const tol = FUEL_DIFF_TOLERANCE_PCT;
+  // Semantic color by severity: outside tolerance (<= -tol) = coral red,
+  // negative but within tolerance = translucent cyan, over (> 0%) = emerald.
+  const barColor = (v) => v <= -tol ? Z2_COLORS.coral : (v < 0 ? Z2_COLORS.cyan : Z2_COLORS.emerald);
+  const barAlpha = (v) => v <= -tol ? 1 : (v < 0 ? 0.55 : 0.9);
+  CHARTS.fuelDiffBig = new Chart(document.getElementById('fuelDiffBig'), {
+    type: 'bar',
+    data: { labels, datasets: [{
+      data, borderRadius: 6, barPercentage: 0.62, categoryPercentage: 0.82,
+      backgroundColor: data.map(v => color_mix_alpha(barColor(v), barAlpha(v))),
+      z2Label: (dp) => `${fmtSigned(dp.raw, 2)}%`,
+    }] },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { min: -1.0, max: 0.6, grid: z2GridStyle(c), ticks: { color: c.muted, callback: v => (v > 0 ? '+' : '') + v + '%' } },
+        y: { grid: { display: false }, ticks: { color: c.textSecondary, font: { size: 12, weight: '600' } } },
+      },
+      plugins: { legend: { display: false }, tooltip: { enabled: false, external: z2ExternalTooltip } },
+    },
+    plugins: [
+      z2ReferenceZonePlugin(color_mix_alpha(Z2_COLORS.emerald, 0.10), tol),
+      z2FuelDiffLabelsPlugin(data, tol, Z2_COLORS.coral, c.textSecondary),
+    ],
+  });
+}
+// Y-axis range for the Zone 2 trend charts: pads the data's own min/max by
+// 15% on each side instead of forcing the axis to start at 0, so real
+// month-to-month variation reads clearly without looking flattened or
+// exaggerated. Clamped at 0 since liters/GP totals here don't go negative.
+function z2PaddedScale(arr) {
+  const min = Math.min(...arr), max = Math.max(...arr);
+  const range = (max - min) || (max * 0.1) || 1;
+  return { min: Math.max(0, Math.floor(min - range * 0.15)), max: Math.ceil(max + range * 0.15) };
+}
+// Marker styling: show a solid dot only at the peak month and a ring-outlined
+// dot at the latest month — every other month stays markerless to cut clutter.
+function z2MarkerRadius(arr) {
+  const peakIdx = arr.indexOf(Math.max(...arr));
+  const lastIdx = arr.length - 1;
+  return (ctx) => (ctx.dataIndex === peakIdx || ctx.dataIndex === lastIdx) ? 5 : 0;
+}
+function z2MarkerStyle(arr, color) {
+  const peakIdx = arr.indexOf(Math.max(...arr));
+  const lastIdx = arr.length - 1;
+  return {
+    pointBackgroundColor: (ctx) => ctx.dataIndex === peakIdx ? color : '#fff',
+    pointBorderColor: color,
+    pointBorderWidth: (ctx) => ctx.dataIndex === lastIdx ? 3 : 2,
+  };
+}
+// Soft vertical background band behind any month flagged as a YoY anomaly —
+// same rule Zone 5 uses for "ยอดขายหดตัวจากปีก่อน" (pct <= -15%), just applied
+// to the fleet-wide monthly total shown in this chart instead of per-route.
+function z2AnomalyBandPlugin(anomalyIdx, color) {
+  return {
+    id: 'z2AnomalyBand_' + Math.random().toString(36).slice(2),
+    beforeDatasetsDraw(chart) {
+      const { ctx, chartArea, scales } = chart;
+      if (!chartArea || !anomalyIdx.length) return;
+      const xScale = scales.x;
+      const bandHalfWidth = (xScale.getPixelForValue(1) - xScale.getPixelForValue(0)) / 2 * 0.82;
+      ctx.save();
+      ctx.fillStyle = color;
+      anomalyIdx.forEach(i => {
+        const centerX = xScale.getPixelForValue(i);
+        ctx.fillRect(centerX - bandHalfWidth, chartArea.top, bandHalfWidth * 2, chartArea.bottom - chartArea.top);
+      });
+      ctx.restore();
+    },
+  };
+}
+// Draws the abbreviated value above every point on a Zone 2 trend line
+// (e.g. "142k" / "฿398k") so monthly figures are readable without hovering.
+function z2ValueLabelsPlugin(labelFn, color) {
+  return {
+    id: 'z2ValueLabels_' + Math.random().toString(36).slice(2),
+    afterDatasetsDraw(chart) {
+      const { ctx, chartArea } = chart;
+      if (!chartArea) return;
+      const meta = chart.getDatasetMeta(0);
+      const data = chart.data.datasets[0].data;
+      ctx.save();
+      ctx.font = '700 10.5px -apple-system, "Segoe UI", sans-serif';
+      ctx.fillStyle = color;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      meta.data.forEach((point, i) => { ctx.fillText(labelFn(data[i]), point.x, point.y - 8); });
+      ctx.restore();
+    },
+  };
+}
+// Abbreviated "Nk" formatting shared by the trend charts' axis ticks and
+// their on-point value labels, so both read consistently (e.g. "139.8k").
+function z2FmtK(v, prefix = '') { return prefix + (Math.round(v / 10000) / 100) + 'M'; }
+// Abbreviated number formatting used by the Top 5 charts (axis ticks, data
+// labels, tooltips): >= 1,000,000 -> "N.NNM" (2dp, one trailing zero
+// trimmed, e.g. 1,253,283 -> "1.25M", 1,000,000 -> "1.0M"); >= 1,000 ->
+// "Nk" (rounded, no decimals, e.g. 551,000 -> "551k", 80,000 -> "80k");
+// below that, the plain rounded number.
+function fmtAbbrevMK(v, prefix = '') {
+  const abs = Math.abs(v);
+  if (abs >= 1e6) {
+    let s = (v / 1e6).toFixed(2);
+    if (s.endsWith('0')) s = s.slice(0, -1);
+    return prefix + s + 'M';
+  }
+  if (abs >= 1000) return prefix + Math.round(v / 1000) + 'k';
+  return prefix + Math.round(v);
+}
+// Data-label plugin for the Top 5 horizontal bar charts: draws the
+// abbreviated value at the open end of each bar (just past the bar for a
+// long bar, or inside near the tip in white if there isn't room — same
+// anti-clip logic as the fuel-diff chart's value labels).
+function top5ValueLabelsPlugin(fmtFn) {
+  return {
+    id: 'top5ValueLabels_' + Math.random().toString(36).slice(2),
+    afterDatasetsDraw(chart) {
+      const { ctx, chartArea } = chart;
+      if (!chartArea) return;
+      const meta = chart.getDatasetMeta(0);
+      const data = chart.data.datasets[0].data;
+      ctx.save();
+      ctx.font = '600 11.5px Prompt, sans-serif';
+      ctx.textBaseline = 'middle';
+      meta.data.forEach((bar, i) => {
+        const label = fmtFn(data[i]);
+        const textWidth = ctx.measureText(label).width;
+        const spaceRight = chartArea.right - bar.x;
+        const fitsOutside = spaceRight > textWidth + 10;
+        ctx.fillStyle = fitsOutside ? '#334155' : '#ffffff';
+        ctx.textAlign = fitsOutside ? 'left' : 'right';
+        const xPos = fitsOutside ? bar.x + 8 : bar.x - 8;
+        ctx.fillText(label, xPos, bar.y);
+      });
+      ctx.restore();
+    },
+  };
+}
+function renderTrend(toYm, bu, c) {
+  // Always trailing 12 months ending at the latest month of the selected
+  // range (toYm), regardless of how long the selected range itself is.
+  const trailMonths = monthsTrailing(toYm, 12);
+  const litersArr = trailMonths.map(m => { const rs = getRows(m, bu); return sum(rs, 'cashL') + sum(rs, 'creditL'); });
+  const gpArr = trailMonths.map(m => sum(getRows(m, bu), 'grossProfit'));
+  const maxLitersIdx = litersArr.indexOf(Math.max(...litersArr));
+  document.getElementById('z2BadgeLiters').textContent = `Peak: ${fmt(litersArr[maxLitersIdx])} ล. (${trailMonths[maxLitersIdx]})`;
+  document.getElementById('z2BadgeGP').textContent = `เฉลี่ย: ฿${fmt(avg(gpArr))}`;
+
+  // YoY anomaly detection — same threshold as Zone 5's "ยอดขายหดตัวจากปีก่อน"
+  // rule (pct <= -15%), computed per trailing month against the same month
+  // one year earlier.
+  const litersYoyPct = trailMonths.map(m => {
+    const prevYearRows = getRows(prevYearYM(m), bu);
+    const prevYearLiters = sum(prevYearRows, 'cashL') + sum(prevYearRows, 'creditL');
+    return pct(sum(getRows(m, bu), 'cashL') + sum(getRows(m, bu), 'creditL'), prevYearLiters);
+  });
+  const gpYoyPct = trailMonths.map(m => pct(sum(getRows(m, bu), 'grossProfit'), sum(getRows(prevYearYM(m), bu), 'grossProfit')));
+  const litersAnomalyIdx = litersYoyPct.map((p, i) => p !== null && p <= -15 ? i : -1).filter(i => i >= 0);
+  const gpAnomalyIdx = gpYoyPct.map((p, i) => p !== null && p <= -15 ? i : -1).filter(i => i >= 0);
+
+  const litersScale = z2PaddedScale(litersArr);
+  const gpScale = z2PaddedScale(gpArr);
+
+  destroyChart('trendLiters');
+  CHARTS.trendLiters = new Chart(document.getElementById('trendLiters'), {
+    type: 'line',
+    data: { labels: trailMonths, datasets: [{
+      data: litersArr, borderColor: Z2_COLORS.cyan, borderWidth: 3, tension: 0.4,
+      pointRadius: z2MarkerRadius(litersArr), pointHoverRadius: 6, ...z2MarkerStyle(litersArr, Z2_COLORS.cyan),
+      fill: true, z2Label: (dp) => `${fmt(dp.raw)} ลิตร`,
+      backgroundColor: (ctx) => { const { chartArea } = ctx.chart; if (!chartArea) return; return z2VGradient(ctx.chart.ctx, chartArea, color_mix_alpha(Z2_COLORS.cyan, 0.32), color_mix_alpha(Z2_COLORS.cyan, 0)); },
+    }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 22 } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } },
+        y: { min: litersScale.min, max: litersScale.max, grid: z2GridStyle(c), ticks: { color: c.muted, font: { size: 11 }, callback: (v) => z2FmtK(v) } },
+      },
+      plugins: { legend: { display: false }, tooltip: { enabled: false, external: z2ExternalTooltip } },
+    },
+    plugins: [z2AnomalyBandPlugin(litersAnomalyIdx, color_mix_alpha(Z2_COLORS.coral, 0.12)), z2ValueLabelsPlugin((v) => z2FmtK(v), c.text)],
+  });
+  destroyChart('trendGP');
+  CHARTS.trendGP = new Chart(document.getElementById('trendGP'), {
+    type: 'line',
+    data: { labels: trailMonths, datasets: [{
+      data: gpArr, borderColor: Z2_COLORS.emerald, borderWidth: 3, tension: 0.4,
+      pointRadius: z2MarkerRadius(gpArr), pointHoverRadius: 6, ...z2MarkerStyle(gpArr, Z2_COLORS.emerald),
+      fill: true, z2Label: (dp) => `฿${fmt(dp.raw)}`,
+      backgroundColor: (ctx) => { const { chartArea } = ctx.chart; if (!chartArea) return; return z2VGradient(ctx.chart.ctx, chartArea, color_mix_alpha(Z2_COLORS.emerald, 0.30), color_mix_alpha(Z2_COLORS.emerald, 0)); },
+    }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 22 } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } },
+        y: { min: gpScale.min, max: gpScale.max, grid: z2GridStyle(c), ticks: { color: c.muted, font: { size: 11 }, callback: (v) => z2FmtK(v, '฿') } },
+      },
+      plugins: { legend: { display: false }, tooltip: { enabled: false, external: z2ExternalTooltip } },
+    },
+    plugins: [z2AnomalyBandPlugin(gpAnomalyIdx, color_mix_alpha(Z2_COLORS.coral, 0.12)), z2ValueLabelsPlugin((v) => z2FmtK(v, '฿'), c.text)],
+  });
+}
+// Small helper: apply an alpha to a "#rrggbb" hex color without needing a
+// full color library — used for the Zone 2 vibrant gradients/tooltips.
+function color_mix_alpha(hex, alpha) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+// ---------------------------------------------------------------------
+// Zone 4 — Monthly repair items (KPI cards, search/filter, table/accordion toggle)
+// ---------------------------------------------------------------------
+// Repair categories now come from the real "ประเภทงาน" column in the "ซ่อมบำรุง"
+// sheet (7 categories) instead of guessing from keywords in the item name.
+// Colors are theme-aware (adjust automatically in dark mode) via COLORS().
+function getRepairCategoryDefs(c) {
+  return [
+    { name: 'PM ตามระยะ', keyword: 'PM', color: c.s1 },
+    { name: 'ซ่อมเสีย (Breakdown)', keyword: 'ซ่อมเสีย', color: c.critical },
+    { name: 'เปลี่ยนอะไหล่', keyword: 'อะไหล่', color: c.s5 },
+    { name: 'ตรวจสภาพประจำปี', keyword: 'ตรวจสภาพ', color: c.s3 },
+    { name: 'ตรวจถังบรรทุก/สอบเทียบมิเตอร์', keyword: 'ถัง', color: c.s4 },
+    { name: 'งานยาง', keyword: 'ยาง', color: c.s2 },
+    { name: 'อื่นๆ', keyword: 'อื่น', color: c.s6 },
+  ];
+}
+// Resolves a row's raw "ประเภทงาน" text to a known category definition. A blank
+// cell (rows entered before the column existed) falls back to "ไม่ระบุ" rather
+// than guessing; unrecognized text is still shown as its own category instead
+// of being silently dropped.
+function resolveRepairCategory(rawText, defs) {
+  const t = (rawText || '').trim();
+  if (!t) return { name: 'ไม่ระบุ', color: '#a8a6a0', unspecified: true };
+  const upper = t.toUpperCase();
+  const found = defs.find(d => t.includes(d.keyword) || upper.includes(d.keyword.toUpperCase()));
+  return found || { name: t, color: '#9b8fce', unknown: true };
+}
+function repairCatBadgeHtml(cat) {
+  return `<span class="repair-tag" style="color:${cat.color};background:color-mix(in srgb, ${cat.color} 14%, transparent);">${escapeHtml(cat.name)}</span>`;
+}
+// Outline/transparent-fill variant used inside the accordion's mini-table
+// (column 3, "ศูนย์ซ่อม & ประเภทงาน") — same category color, but a bordered
+// pill with a transparent background instead of the solid-fill badge used
+// elsewhere, so it reads lighter next to the vendor name.
+function repairCatBadgeOutlineHtml(cat) {
+  return `<span class="repair-tag-outline" style="color:${cat.color};border-color:color-mix(in srgb, ${cat.color} 45%, transparent);">${escapeHtml(cat.name)}</span>`;
+}
+
+// Cross-reference each repair row's vehicle to the Route ID it ran that same
+// BU + Year-Month in the main sheet, so Zone 4 can show "Route ID (ตอนซ่อม)"
+// even though the repair tab itself doesn't track Route ID directly.
+function routeIdForRepair(r) {
+  const match = RAW.find(x => x.bu === r.bu && x.ym === r.ym && x.vehicle === r.vehicle);
+  return match ? match.routeId : '-';
+}
+
+function renderRepairZone() {
+  const c = COLORS();
+  const catDefs = getRepairCategoryDefs(c);
+  const bu = STATE.bu;
+  const rangeMonthsArr = monthsInRange(STATE.fromYm, STATE.toYm);
+  const rangeMonths = new Set(rangeMonthsArr);
+  const monthRows = RAW_REPAIR.filter(r => rangeMonths.has(r.ym) && (bu === 'ALL' || r.bu === bu))
+    .map(r => ({ ...r, routeId: routeIdForRepair(r), category: resolveRepairCategory(r.categoryRaw, catDefs) }));
+
+  document.getElementById('repairTitle').textContent = `(${monthRows.length} รายการ)`;
+  const section1El = document.getElementById('zone4Section1Range');
+  if (section1El) section1El.textContent = `Monthly Performance & Breakdown — ${rangeLabel(STATE.fromYm, STATE.toYm)}`;
+
+  // Populate vehicle/category/shop filter dropdowns once per render (cheap enough; option list rarely changes).
+  const vehicleSelect = document.getElementById('repairVehicleFilter');
+  const tagSelect = document.getElementById('repairTagFilter');
+  const shopSelect = document.getElementById('repairShopFilter');
+  const allVehicles = [...new Set(monthRows.map(r => r.vehicle))].sort();
+  const allCats = [...new Set(monthRows.map(r => r.category.name))].sort();
+  const allShops = [...new Set(monthRows.map(r => r.shop))].sort();
+  if (vehicleSelect.dataset.count != allVehicles.length) {
+    vehicleSelect.innerHTML = '<option value="ALL">ทุกคัน</option>' + allVehicles.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+    vehicleSelect.value = allVehicles.includes(STATE.repairVehicle) ? STATE.repairVehicle : 'ALL';
+    STATE.repairVehicle = vehicleSelect.value;
+    vehicleSelect.dataset.count = allVehicles.length;
+  }
+  if (tagSelect.dataset.count != allCats.length) {
+    tagSelect.innerHTML = '<option value="ALL">ทุกประเภทงาน</option>' + allCats.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+    tagSelect.value = STATE.repairTag; tagSelect.dataset.count = allCats.length;
+  }
+  if (shopSelect.dataset.count != allShops.length) {
+    shopSelect.innerHTML = '<option value="ALL">ทุกศูนย์ซ่อม</option>' + allShops.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+    shopSelect.value = STATE.repairShop; shopSelect.dataset.count = allShops.length;
+  }
+
+  // Dropdown-filtered subset (รถ/ประเภทงาน/ศูนย์ซ่อม) — this now drives the
+  // KPI cards reflect รถ/ประเภทงาน/ศูนย์ซ่อม too (not just เดือน-ปี/BU).
+  const filtered = monthRows.filter(r => {
+    if (STATE.repairVehicle !== 'ALL' && r.vehicle !== STATE.repairVehicle) return false;
+    if (STATE.repairTag !== 'ALL' && r.category.name !== STATE.repairTag) return false;
+    if (STATE.repairShop !== 'ALL' && r.shop !== STATE.repairShop) return false;
+    return true;
+  });
+
+  const totalCost = sum(filtered, 'cost');
+  const vehicleTotals = {};
+  filtered.forEach(r => { vehicleTotals[r.vehicle] = (vehicleTotals[r.vehicle] || 0) + r.cost; });
+  const vehicleCount = Object.keys(vehicleTotals).length;
+  const shopCount = new Set(filtered.map(r => r.shop)).size;
+  let topVehicle = { plate: '-', total: 0 };
+  Object.entries(vehicleTotals).forEach(([p, t]) => { if (t > topVehicle.total) topVehicle = { plate: p, total: t }; });
+
+  document.getElementById('repKpiTotal').textContent = filtered.length ? '฿' + fmt(totalCost, 2) : '-';
+  document.getElementById('repKpiVehicles').textContent = vehicleCount ? vehicleCount + ' คัน' : '-';
+  document.getElementById('repKpiTopLabel').textContent = filtered.length ? `ยอดสูงสุด — ${topVehicle.plate}` : 'ยอดสูงสุด';
+  document.getElementById('repKpiTopValue').textContent = filtered.length ? '฿' + fmt(topVehicle.total, 2) : '-';
+  document.getElementById('repKpiShops').textContent = shopCount ? shopCount + ' แห่ง' : '-';
+
+  renderRepairAccordion(filtered, topVehicle.plate);
+  renderRepairMonthlyStackedChart(filtered, catDefs, c);
+  renderRepairSection1Donut(filtered, catDefs, c);
+
+  renderRepairYtdSection(c, catDefs);
+}
+
+// Section 1's chart — one bar PER VEHICLE (not per month): each bar totals
+// that vehicle's repair cost across the whole selected range, labeled with
+// its plate + Route ID, sorted highest → lowest, stacked and colored by
+// ประเภทงาน (job category) — same 7 category colors as both donuts. Uses
+// `filtered` (already narrowed by รถ/ประเภทงาน/ศูนย์ซ่อม) so it matches the
+// KPI cards above it. The side-by-side donut (รendered separately, see
+// renderRepairSection1Donut) shares this exact same filtered dataset.
+function renderRepairMonthlyStackedChart(filtered, catDefs, c) {
+  destroyChart('repairMonthlyStacked');
+
+  // Category list: the known 7 defs first (stable legend order/colors),
+  // plus any category actually present that didn't match one of them
+  // (ไม่ระบุ / unrecognized text) so no cost silently disappears or gets
+  // misattributed to the wrong bucket.
+  const catByName = {};
+  catDefs.forEach(d => { catByName[d.name] = d.color; });
+  filtered.forEach(r => { if (!(r.category.name in catByName)) catByName[r.category.name] = r.category.color; });
+  const catNames = Object.keys(catByName);
+
+  // Group by vehicle (plate), keeping its Route ID and summing per category.
+  const vehicleGroups = {};
+  filtered.forEach(r => {
+    if (!vehicleGroups[r.vehicle]) vehicleGroups[r.vehicle] = { vehicle: r.vehicle, routeId: r.routeId, totals: catNames.map(() => 0), total: 0 };
+    const g = vehicleGroups[r.vehicle];
+    const catIdx = catNames.indexOf(r.category.name);
+    if (catIdx >= 0) g.totals[catIdx] += r.cost;
+    g.total += r.cost;
+  });
+  const vehicles = Object.values(vehicleGroups).sort((a, b) => b.total - a.total);
+
+  const ctx = document.getElementById('repairMonthlyStackedChart').getContext('2d');
+  CHARTS.repairMonthlyStacked = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: vehicles.map(v => [v.vehicle, v.routeId]),
+      datasets: catNames.map((name, ci) => ({
+        label: name,
+        data: vehicles.map(v => v.totals[ci]),
+        backgroundColor: catByName[name],
+        borderRadius: 4,
+        maxBarThickness: 48,
+      })),
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } },
+        y: { stacked: true, ticks: { color: c.muted, font: { size: 11 }, callback: (v) => '฿' + (v / 1000) + 'k' }, grid: { color: c.grid } },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          mode: 'index',
+          backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1,
+          callbacks: { label: (item) => (item.raw > 0 ? ` ${item.dataset.label}: ฿${fmt(item.raw, 2)}` : null) },
+        },
+      },
+    },
+  });
+  const legendEl = document.getElementById('repairMonthlyLegend');
+  if (legendEl) legendEl.innerHTML = catNames.map(name => `<span><span class="sq" style="background:${catByName[name]};"></span>${escapeHtml(name)}</span>`).join('');
+}
+// Section 1's donut — job-category proportion for the exact same `filtered`
+// dataset as the per-vehicle bar chart beside it (selected range + current
+// รถ/ประเภทงาน/ศูนย์ซ่อม filters). Separate chart instance/canvas from
+// Section 2's annual donut — the two are intentionally independent.
+function renderRepairSection1Donut(filtered, catDefs, c) {
+  const totals = {};
+  const colorByName = {};
+  catDefs.forEach(d => { totals[d.name] = 0; colorByName[d.name] = d.color; });
+  filtered.forEach(r => {
+    totals[r.category.name] = (totals[r.category.name] || 0) + r.cost;
+    colorByName[r.category.name] = r.category.color;
+  });
+  const names = Object.keys(totals).filter(n => totals[n] > 0);
+  const grandTotal = names.reduce((a, n) => a + totals[n], 0);
+
+  document.getElementById('repairSection1DonutCenterValue').textContent = '฿' + fmt(grandTotal, 0);
+  const legendEl = document.getElementById('repairSection1DonutLegend');
+  if (legendEl) {
+    legendEl.innerHTML = names.length ? names.map(n => {
+      const pct = grandTotal > 0 ? fmt(100 * totals[n] / grandTotal, 1) : '0';
+      return `<div style="display:flex;align-items:center;gap:6px;font-size:12.5px;"><span style="width:9px;height:9px;border-radius:3px;background:${colorByName[n]};flex-shrink:0;"></span><span style="flex:1;min-width:0;">${escapeHtml(n)}</span><span style="color:var(--text-muted);">${pct}%</span></div>`;
+    }).join('') : `<div style="color:var(--text-muted);font-size:13px;">ไม่พบรายการซ่อมที่ตรงกับตัวกรอง</div>`;
+  }
+
+  destroyChart('repairSection1Donut');
+  const ctx = document.getElementById('repairSection1DonutChart').getContext('2d');
+  CHARTS.repairSection1Donut = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels: names, datasets: [{ data: names.map(n => totals[n]), backgroundColor: names.map(n => colorByName[n]), borderColor: c.surface, borderWidth: 2, hoverOffset: 6 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '68%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1,
+          callbacks: { label: (item) => ` ${item.label}: ฿${fmt(item.raw, 2)}` },
+        },
+      },
+    },
+  });
+}
+
+function renderRepairAccordion(rows, hotPlate) {
+  const wrap = document.getElementById('repairAccordionWrap');
+  const groups = {};
+  rows.forEach(r => {
+    if (!groups[r.vehicle]) groups[r.vehicle] = { bu: r.bu, routeId: r.routeId, items: [], total: 0 };
+    groups[r.vehicle].items.push(r);
+    groups[r.vehicle].total += r.cost;
+  });
+  const sortedPlates = Object.entries(groups).sort((a, b) => b[1].total - a[1].total);
+  if (!sortedPlates.length) {
+    wrap.innerHTML = `<div class="card" style="text-align:center;color:var(--text-muted);padding:24px;">ไม่พบรายการซ่อมที่ตรงกับตัวกรอง</div>`;
+    return;
+  }
+  wrap.innerHTML = sortedPlates.map(([plate, g]) => {
+    const isHot = plate === hotPlate;
+    const isOpen = REPAIR_ACCORDION_OPEN.has(plate) || (isHot && !REPAIR_ACCORDION_TOUCHED);
+    return `
+    <div class="accordion-item ${isHot ? 'hot' : ''} ${isOpen ? 'open' : ''}" data-plate="${escapeHtml(plate)}">
+      <div class="accordion-head" onclick="toggleRepairAccordion('${escapeHtml(plate).replace(/'/g, "\\'")}')">
+        <div class="left">
+          <span class="bu-badge">${escapeHtml(g.bu)}</span>
+          <span class="plate">${escapeHtml(plate)}</span>
+          <span class="meta">Route ID: ${escapeHtml(g.routeId)} · ${g.items.length} รายการ</span>
+          ${isHot ? '<span class="hot-badge">🔴 ค่าซ่อมสูงสุด</span>' : ''}
+        </div>
+        <div class="left">
+          <span class="total"><span class="cur">฿</span><span class="amt">${fmt(g.total, 2)}</span></span>
+          <svg class="accordion-arrow" width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+        </div>
+      </div>
+      ${isOpen ? `<div class="accordion-body"><table class="repair-mini-table">
+        <thead><tr>
+          <th class="col-ym">เดือน</th>
+          <th>รายการซ่อม</th>
+          <th>ศูนย์ซ่อม &amp; ประเภทงาน</th>
+          <th class="col-amount">จำนวนเงิน</th>
+        </tr></thead>
+        <tbody>${[...g.items].sort((a, b) => a.ym < b.ym ? -1 : a.ym > b.ym ? 1 : 0).map(r => `
+          <tr>
+            <td class="col-ym">${escapeHtml(thaiMonthShort(r.ym))} ${escapeHtml((r.ym || '').split('-')[0].slice(-2))}</td>
+            <td class="col-desc">${escapeHtml(r.item)}</td>
+            <td class="col-vendor"><span class="shop-name">${escapeHtml(r.shop)}</span>${repairCatBadgeOutlineHtml(r.category)}</td>
+            <td class="col-amount">฿${fmt(r.cost, 2)}</td>
+          </tr>
+        `).join('')}</tbody>
+      </table></div>` : ''}
+    </div>`;
+  }).join('');
+}
+let REPAIR_ACCORDION_OPEN = new Set();
+let REPAIR_ACCORDION_TOUCHED = false;
+function toggleRepairAccordion(plate) {
+  REPAIR_ACCORDION_TOUCHED = true;
+  if (REPAIR_ACCORDION_OPEN.has(plate)) REPAIR_ACCORDION_OPEN.delete(plate); else REPAIR_ACCORDION_OPEN.add(plate);
+  renderRepairZone();
+}
+
+// ---------------------------------------------------------------------
+// Zone 4 — "YTD" cumulative maintenance chart + repair-category donut
+// Spans exactly the selected month-range filter (STATE.fromYm..STATE.toYm),
+// respecting the BU filter. A separate vehicle picker (Fleet vs one vehicle)
+// controls both the line chart and the donut; clicking a donut slice / legend
+// row cross-filters the repair table below by setting the existing
+// "ประเภทงาน" dropdown.
+// ---------------------------------------------------------------------
+const YTD_MONTH_LABELS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+
+// Section 2 is deliberately independent of the month-range filter's
+// from/to — it always accumulates the whole calendar year (ม.ค. through
+// the latest month the sheet actually has data for that year), anchored to
+// the year of STATE.toYm (the latest month in whatever range is currently
+// selected). BU/รถ/ประเภทงาน/ศูนย์ซ่อม filters still apply, same as Section 1.
+function renderRepairYtdSection(c, catDefs) {
+  const bu = STATE.bu;
+  const year = (STATE.toYm || ALL_MONTHS[ALL_MONTHS.length - 1] || '').split('-')[0];
+  const monthsOfYear = ALL_MONTHS.filter(m => m.startsWith(year + '-'));
+  const latestMonthOfYear = monthsOfYear.length ? monthsOfYear[monthsOfYear.length - 1] : STATE.toYm;
+  const yearMonths = monthsInRange(`${year}-01`, latestMonthOfYear);
+  const yearMonthSet = new Set(yearMonths);
+
+  const yearRows = RAW_REPAIR.filter(r => yearMonthSet.has(r.ym) && (bu === 'ALL' || r.bu === bu))
+    .map(r => ({ ...r, category: resolveRepairCategory(r.categoryRaw, catDefs) }))
+    .filter(r => {
+      if (STATE.repairVehicle !== 'ALL' && r.vehicle !== STATE.repairVehicle) return false;
+      if (STATE.repairTag !== 'ALL' && r.category.name !== STATE.repairTag) return false;
+      if (STATE.repairShop !== 'ALL' && r.shop !== STATE.repairShop) return false;
+      return true;
+    });
+  const monthLabels = yearMonths.map(m => thaiMonthShort(m));
+
+  const monthlyTotals = new Array(monthLabels.length).fill(0);
+  yearRows.forEach(r => {
+    const mIdx = yearMonths.indexOf(r.ym);
+    if (mIdx >= 0 && mIdx < monthlyTotals.length) monthlyTotals[mIdx] += r.cost;
+  });
+  const ytdTotal = monthlyTotals.reduce((a, b) => a + b, 0);
+  const maxMonthVal = monthlyTotals.length ? Math.max(...monthlyTotals) : 0;
+  const maxMonthIdx = monthlyTotals.indexOf(maxMonthVal);
+  document.getElementById('ytdKpiTotal').textContent = yearRows.length ? '฿' + fmt(ytdTotal, 2) : '-';
+  document.getElementById('ytdKpiTopMonth').textContent = yearRows.length && maxMonthVal > 0
+    ? `${monthLabels[maxMonthIdx]} (฿${fmt(maxMonthVal, 2)})` : '-';
+  const vehicleYearTotals = {};
+  yearRows.forEach(r => { vehicleYearTotals[r.vehicle] = (vehicleYearTotals[r.vehicle] || 0) + r.cost; });
+  let topVehicleOfYear = { vehicle: '-', total: 0 };
+  Object.entries(vehicleYearTotals).forEach(([v, t]) => { if (t > topVehicleOfYear.total) topVehicleOfYear = { vehicle: v, total: t }; });
+  document.getElementById('ytdKpiTopVehicle').textContent = topVehicleOfYear.total > 0
+    ? `${topVehicleOfYear.vehicle} (฿${fmt(topVehicleOfYear.total, 2)})` : '-';
+
+  const rangeEl = document.getElementById('zone4Section2Range');
+  if (rangeEl) rangeEl.textContent = `YTD Annual Summary & Category Share — ${rangeLabel(yearMonths[0], yearMonths[yearMonths.length - 1])}`;
+
+  const isSingleVehicle = STATE.repairVehicle !== 'ALL';
+  renderRepairCumulativeChart(c, monthLabels, monthlyTotals, isSingleVehicle ? STATE.repairVehicle : null);
+  renderRepairDonut(c, catDefs, isSingleVehicle ? STATE.repairVehicle : 'FLEET', yearRows);
+}
+
+// Cumulative (running-total) area line chart — Jan through the latest
+// month of the year that actually has data, independent of the
+// month-range filter. A line (not bars) reads more clearly as "สะสม".
+function renderRepairCumulativeChart(c, monthLabels, monthlyTotals, vehicle) {
+  document.getElementById('repairYtdChartDesc').textContent = vehicle
+    ? `สะสมค่าซ่อมของ ${vehicle} ตั้งแต่ ม.ค. ถึงเดือนล่าสุดที่มีข้อมูลของปีนั้น — ไม่ตัดตามช่วงที่เลือกในตัวกรองด้านบน`
+    : 'สะสมค่าซ่อมทั้งกองรถตั้งแต่ ม.ค. ถึงเดือนล่าสุดที่มีข้อมูลของปีนั้น — ไม่ตัดตามช่วงที่เลือกในตัวกรองด้านบน (ยังกรองตาม BU/รถ/ประเภทงาน/ศูนย์ซ่อมที่เลือกอยู่)';
+  const cumulative = monthlyTotals.reduce((acc, v, i) => { acc.push((acc[i - 1] || 0) + v); return acc; }, []);
+
+  destroyChart('repairYtd');
+  const ctx = document.getElementById('repairYtdChart').getContext('2d');
+  CHARTS.repairYtd = new Chart(ctx, {
+    type: 'line',
+    data: { labels: monthLabels, datasets: [{
+      label: 'สะสม', data: cumulative, borderColor: c.s1, borderWidth: 3, tension: 0.3, fill: true,
+      backgroundColor: color_mix_alpha(c.s1, 0.14), pointRadius: 3, pointBackgroundColor: c.s1,
+    }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1,
+          callbacks: { label: (item) => ` สะสม ฿${fmt(item.raw, 2)}` },
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } },
+        y: { ticks: { color: c.muted, font: { size: 11 }, callback: (v) => '฿' + (v / 1000) + 'k' }, grid: { color: c.grid } }
+      }
+    }
+  });
+}
+
+function renderRepairDonut(c, catDefs, view, viewRows) {
+  const totals = {};
+  const colorByName = {};
+  catDefs.forEach(d => { totals[d.name] = 0; colorByName[d.name] = d.color; });
+  viewRows.forEach(r => {
+    const cat = resolveRepairCategory(r.categoryRaw, catDefs);
+    totals[cat.name] = (totals[cat.name] || 0) + r.cost;
+    colorByName[cat.name] = cat.color;
+  });
+  const names = Object.keys(totals).filter(n => totals[n] > 0);
+  const grandTotal = names.reduce((a, n) => a + totals[n], 0);
+
+  document.getElementById('repairDonutFilterNote').textContent = view === 'FLEET' ? 'ภาพรวมทั้งกองรถ' : `เฉพาะ ${view}`;
+  const focusName = (STATE.repairTag !== 'ALL' && totals[STATE.repairTag] !== undefined) ? STATE.repairTag : null;
+  document.getElementById('repairDonutCenterLabel').textContent = focusName || 'ทั้งหมด';
+  document.getElementById('repairDonutCenterValue').textContent = '฿' + fmt(focusName ? totals[focusName] : grandTotal, 0);
+
+  destroyChart('repairDonut');
+  const ctx = document.getElementById('repairDonutChart').getContext('2d');
+  CHARTS.repairDonut = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: names,
+      datasets: [{
+        data: names.map(n => totals[n]), backgroundColor: names.map(n => colorByName[n]),
+        borderColor: c.surface, borderWidth: 2, hoverOffset: 6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '68%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1,
+          callbacks: {
+            label: (item) => {
+              const pct = grandTotal ? (item.raw / grandTotal * 100).toFixed(1) : '0.0';
+              return ` ${item.label}: ฿${fmt(item.raw, 0)} (${pct}%)`;
+            }
+          }
+        }
+      },
+      onHover: (evt, elements) => {
+        if (elements.length) {
+          const name = names[elements[0].index];
+          document.getElementById('repairDonutCenterLabel').textContent = name;
+          document.getElementById('repairDonutCenterValue').textContent = '฿' + fmt(totals[name], 0);
+          evt.native.target.style.cursor = 'pointer';
+        } else if (evt.native.target) {
+          evt.native.target.style.cursor = 'default';
+        }
+      },
+      onClick: (evt, elements) => {
+        if (!elements.length) return;
+        const name = names[elements[0].index];
+        STATE.repairTag = (STATE.repairTag === name) ? 'ALL' : name;
+        document.getElementById('repairTagFilter').value = STATE.repairTag;
+        renderRepairZone();
+      }
+    }
+  });
+
+  const legendEl = document.getElementById('repairCatLegend');
+  legendEl.innerHTML = names.map(n => {
+    const pct = grandTotal ? (totals[n] / grandTotal * 100).toFixed(1) : '0.0';
+    const isActive = STATE.repairTag === n;
+    return `<div class="cat-row ${isActive ? 'active' : ''}" data-cat="${escapeHtml(n)}">
+      <span class="cat-name"><span class="cat-dot" style="background:${colorByName[n]}"></span>${escapeHtml(n)}</span>
+      <span class="cat-pct">${pct}%</span>
+    </div>`;
+  }).join('');
+  legendEl.querySelectorAll('.cat-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const name = row.getAttribute('data-cat');
+      STATE.repairTag = (STATE.repairTag === name) ? 'ALL' : name;
+      document.getElementById('repairTagFilter').value = STATE.repairTag;
+      renderRepairZone();
+    });
+  });
+}
+
+bootstrap();
+</script>
+</body>
+</html>
