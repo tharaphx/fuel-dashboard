@@ -2306,9 +2306,10 @@ function renderRepairMonthlyStackedChart(filtered, catDefs, c) {
     },
     options: {
       responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 22 } },
       scales: {
         x: { stacked: true, grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } },
-        y: { stacked: true, ticks: { color: c.muted, font: { size: 11 }, callback: (v) => '฿' + (v / 1000) + 'k' }, grid: { color: c.grid } },
+        y: { stacked: true, ticks: { color: c.muted, font: { size: 11 }, callback: (v) => fmtAbbrevMK(v, '฿') }, grid: { color: c.grid } },
       },
       plugins: {
         legend: { display: false },
@@ -2319,9 +2320,34 @@ function renderRepairMonthlyStackedChart(filtered, catDefs, c) {
         },
       },
     },
+    plugins: [stackedTotalLabelsPlugin(vehicles.map(v => v.total), (v) => fmtAbbrevMK(v, '฿'), c.text)],
   });
   const legendEl = document.getElementById('repairMonthlyLegend');
   if (legendEl) legendEl.innerHTML = catNames.map(name => `<span><span class="sq" style="background:${catByName[name]};"></span>${escapeHtml(name)}</span>`).join('');
+}
+// Total-value label drawn above each stacked bar's topmost point (the
+// pixel for its grand total on the y-scale, rather than any single
+// dataset's segment — safe regardless of which category ends up on top).
+function stackedTotalLabelsPlugin(totals, fmtFn, color) {
+  return {
+    id: 'stackedTotalLabels_' + Math.random().toString(36).slice(2),
+    afterDatasetsDraw(chart) {
+      const { ctx, scales } = chart;
+      const meta = chart.getDatasetMeta(0);
+      if (!meta || !meta.data.length) return;
+      ctx.save();
+      ctx.font = '700 11px Prompt, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = color;
+      meta.data.forEach((bar, i) => {
+        const total = totals[i];
+        if (!total) return;
+        const yPix = scales.y.getPixelForValue(total);
+        ctx.fillText(fmtFn(total), bar.x, yPix - 8);
+      });
+      ctx.restore();
+    },
+  };
 }
 // Section 1's donut — job-category proportion for the exact same `filtered`
 // dataset as the per-vehicle bar chart beside it (selected range + current
@@ -2500,6 +2526,7 @@ function renderRepairCumulativeChart(c, monthLabels, monthlyTotals, vehicle) {
     }] },
     options: {
       responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 22 } },
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -2509,10 +2536,28 @@ function renderRepairCumulativeChart(c, monthLabels, monthlyTotals, vehicle) {
       },
       scales: {
         x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } },
-        y: { ticks: { color: c.muted, font: { size: 11 }, callback: (v) => '฿' + (v / 1000) + 'k' }, grid: { color: c.grid } }
+        y: { ticks: { color: c.muted, font: { size: 11 }, callback: (v) => fmtAbbrevMK(v, '฿') }, grid: { color: c.grid } }
       }
-    }
+    },
+    plugins: [lineValueLabelsPlugin(cumulative, (v) => fmtAbbrevMK(v, '฿'), c.text)],
   });
+}
+// Value label drawn above each point on the cumulative line.
+function lineValueLabelsPlugin(data, fmtFn, color) {
+  return {
+    id: 'lineValueLabels_' + Math.random().toString(36).slice(2),
+    afterDatasetsDraw(chart) {
+      const { ctx } = chart;
+      const meta = chart.getDatasetMeta(0);
+      if (!meta) return;
+      ctx.save();
+      ctx.font = '700 11px Prompt, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = color;
+      meta.data.forEach((point, i) => { if (data[i]) ctx.fillText(fmtFn(data[i]), point.x, point.y - 10); });
+      ctx.restore();
+    },
+  };
 }
 
 function renderRepairDonut(c, catDefs, view, viewRows) {
