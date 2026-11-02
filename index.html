@@ -498,16 +498,26 @@
     <h3 class="block-subtitle"><span class="zone-tag">ZONE 2</span> กราฟเจาะลึกที่ตารางแทนไม่ได้</h3>
     <div class="zone2-vibrant">
       <div class="focus-grid">
+        <div class="chart-card">
+          <h3>Top 5 เส้นทาง — ยอดขาย (ลิตร)</h3>
+          <div class="desc">รวมทั้งช่วงเดือนที่เลือกต่อเส้นทาง เรียงมาก → น้อย ตามตัวกรอง BU ปัจจุบัน</div>
+          <div class="chart-wrap"><canvas id="top5Liters"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Top 5 เส้นทาง — กำไรขั้นต้น</h3>
+          <div class="desc">รวมทั้งช่วงเดือนที่เลือกต่อเส้นทาง เรียงมาก → น้อย ตามตัวกรอง BU ปัจจุบัน</div>
+          <div class="chart-wrap"><canvas id="top5GP"></canvas></div>
+        </div>
         <div class="chart-card full-span">
           <div class="badge-highlight" id="z2BadgeLiters" style="color:#2563eb;background:rgba(37,99,235,.1);"></div>
           <h3>ยอดขายลิตรย้อนหลัง 12 เดือน</h3>
-          <div class="desc">รวมทุกเส้นทางตามตัวกรอง BU ปัจจุบัน</div>
+          <div class="desc">รวมทุกเส้นทางตามตัวกรอง BU ปัจจุบัน — ย้อนหลัง 12 เดือนจากเดือนล่าสุดในช่วงที่เลือก</div>
           <div class="chart-wrap"><canvas id="trendLiters"></canvas></div>
         </div>
         <div class="chart-card full-span">
           <div class="badge-highlight" id="z2BadgeGP" style="color:#10b981;background:rgba(16,185,129,.1);"></div>
           <h3>กำไรขั้นต้นย้อนหลัง 12 เดือน</h3>
-          <div class="desc">รวมทุกเส้นทางตามตัวกรอง BU ปัจจุบัน</div>
+          <div class="desc">รวมทุกเส้นทางตามตัวกรอง BU ปัจจุบัน — ย้อนหลัง 12 เดือนจากเดือนล่าสุดในช่วงที่เลือก</div>
           <div class="chart-wrap"><canvas id="trendGP"></canvas></div>
         </div>
         <div class="chart-card">
@@ -1277,7 +1287,8 @@ function renderAll() {
   renderScatter(rowData, c);
   renderTrips(rowData, c);
   renderFuelDiffBig(rowData, c);
-  renderTrend(fromYm, toYm, bu, c);
+  renderTrend(toYm, bu, c);
+  renderTop5(rowData, c);
   renderRepairZone();
   // Runs after renderExceptions() so FLAGGED_ROUTES is already populated for this month.
   renderAlertBar(rowData);
@@ -1650,6 +1661,38 @@ function renderTrips(rowData, c) {
     },
   });
 }
+// Top 5 routes by sales liters / gross profit, totaled across the whole
+// selected month-range (same per-route totals already computed into
+// rowData for Zone 3's table — not a per-month breakdown), respecting the
+// current BU filter (rowData is already filtered to it upstream).
+function renderTop5(rowData, c) {
+  renderTop5Chart('top5Liters', rowData, c, 'liters', Z2_COLORS.cyan, (v) => `${fmt(v)} ลิตร`, (v) => (v / 1000) + 'k');
+  renderTop5Chart('top5GP', rowData, c, 'gp', Z2_COLORS.emerald, (v) => `฿${fmt(v)}`, (v) => '฿' + (v / 1000) + 'k');
+}
+function renderTop5Chart(canvasId, rowData, c, field, color, tooltipFmt, axisFmt) {
+  destroyChart(canvasId);
+  const top5 = [...rowData].sort((a, b) => b[field] - a[field]).slice(0, 5);
+  const labels = top5.map(r => r.routeId);
+  const data = top5.map(r => r[field]);
+  CHARTS[canvasId] = new Chart(document.getElementById(canvasId), {
+    type: 'bar',
+    data: { labels, datasets: [{
+      data, borderRadius: 8, maxBarThickness: 34, barPercentage: 0.7, categoryPercentage: 0.75,
+      backgroundColor: (ctx) => { const { chartArea } = ctx.chart; if (!chartArea) return color;
+        const g = ctx.chart.ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
+        g.addColorStop(0, color_mix_alpha(color, 0.55)); g.addColorStop(1, color_mix_alpha(color, 0.95)); return g; },
+      z2Label: (dp) => tooltipFmt(dp.raw),
+    }] },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { grid: z2GridStyle(c), ticks: { color: c.muted, font: { size: 11 }, callback: axisFmt } },
+        y: { grid: { display: false }, ticks: { color: c.textSecondary, font: { size: 12, weight: '600' } } },
+      },
+      plugins: { legend: { display: false }, tooltip: { enabled: false, external: z2ExternalTooltip } },
+    },
+  });
+}
 // Background reference-zone plugin for the fuel-diff chart: one shaded
 // rectangle spanning the tolerance band (±FUEL_DIFF_TOLERANCE_PCT) across the
 // full chart height, drawn behind the bars — replaces the old two-dataset
@@ -1796,8 +1839,10 @@ function z2ValueLabelsPlugin(labelFn, color) {
 // Abbreviated "Nk" formatting shared by the trend charts' axis ticks and
 // their on-point value labels, so both read consistently (e.g. "139.8k").
 function z2FmtK(v, prefix = '') { return prefix + (Math.round(v / 10000) / 100) + 'M'; }
-function renderTrend(fromYm, toYm, bu, c) {
-  const trailMonths = monthsInRange(fromYm, toYm);
+function renderTrend(toYm, bu, c) {
+  // Always trailing 12 months ending at the latest month of the selected
+  // range (toYm), regardless of how long the selected range itself is.
+  const trailMonths = monthsTrailing(toYm, 12);
   const litersArr = trailMonths.map(m => { const rs = getRows(m, bu); return sum(rs, 'cashL') + sum(rs, 'creditL'); });
   const gpArr = trailMonths.map(m => sum(getRows(m, bu), 'grossProfit'));
   const maxLitersIdx = litersArr.indexOf(Math.max(...litersArr));
