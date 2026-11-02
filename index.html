@@ -176,7 +176,7 @@
     padding: 20px 22px;
   }
   .kpi-label { font-size: 14.5px; color: var(--text-secondary); margin-bottom: 10px; font-weight: 600; }
-  .kpi-value { font-size: 34px; font-weight: 800; line-height: 1.1; letter-spacing: -0.01em; }
+  .kpi-value { font-size: 32px; font-weight: 800; line-height: 1.1; letter-spacing: -0.01em; }
   .kpi-value .unit { font-size: 17px; font-weight: 600; color: var(--text-secondary); margin-left: 4px; }
   .kpi-sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
   .delta { display: inline-flex; align-items: center; gap: 5px; font-size: 14px; font-weight: 700; margin-top: 10px; padding: 3px 10px; border-radius: 20px; }
@@ -338,6 +338,13 @@
   #z2Tooltip .tt-dot { width:8px; height:8px; border-radius:50%; }
 
   /* ---------- Zone 4 ---------- */
+  .zone4-section-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 26px 0 14px; padding-bottom: 10px; border-bottom: 2px solid var(--border); }
+  .zone4-section-head:first-of-type { margin-top: 4px; }
+  .zone4-section-head .num { font-size: 12px; font-weight: 800; color: #fff; background: var(--series-1); border-radius: 20px; padding: 3px 11px; flex-shrink: 0; }
+  .zone4-section-head h3 { font-size: 18px; margin: 0; }
+  .zone4-section-head .en { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+  .repair-cat-legend-row { display: flex; gap: 8px 16px; margin-top: 12px; font-size: 12px; color: var(--text-secondary); flex-wrap: wrap; }
+  .repair-cat-legend-row .sq { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: middle; }
   .repair-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 20px; }
   .repair-kpi-card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
   .repair-kpi-card .label { font-size: 14.5px; color: var(--text-secondary); font-weight: 600; margin-bottom: 6px; }
@@ -569,6 +576,12 @@
     <h2 class="block-title"><span class="zone-tag">ZONE 4</span> รายการซ่อมประจำเดือน (จากชีตซ่อมบำรุง) <span class="n" id="repairTitle"></span></h2>
     <div id="repairZoneStatus" style="font-size:14.5px;color:var(--text-muted);margin-bottom:12px;"></div>
 
+    <div class="zone4-section-head">
+      <span class="num">1</span>
+      <h3>ภาพรวมตามช่วงเดือนที่เลือก</h3>
+      <span class="en" id="zone4Section1Range">Monthly Performance &amp; Breakdown</span>
+    </div>
+
     <div class="repair-kpi-grid">
       <div class="repair-kpi-card">
         <div class="label">ยอดรวมค่าซ่อม</div>
@@ -581,7 +594,7 @@
       <div class="repair-kpi-card">
         <div class="label" id="repKpiTopLabel">ยอดสูงสุด</div>
         <div class="value accent-red" id="repKpiTopValue">-</div>
-        <div class="sub">สูงกว่ารถคันอื่นในเดือนนี้</div>
+        <div class="sub">สูงกว่ารถคันอื่นในช่วงที่เลือก</div>
       </div>
       <div class="repair-kpi-card">
         <div class="label">ศูนย์ซ่อม</div>
@@ -589,11 +602,20 @@
       </div>
     </div>
 
-    <div class="repair-ytd-section">
-      <div class="repair-ytd-head">
-        <h3>แนวโน้มค่าซ่อมสะสมประจำปี &amp; สัดส่วนตามประเภทงาน</h3>
-      </div>
+    <div class="chart-card" style="margin-bottom:22px;">
+      <h3>ค่าซ่อมประจำเดือน</h3>
+      <div class="desc" id="repairMonthlyChartDesc">แสดงยอดรวมค่าซ่อมแยกเป็นรายเดือนตามช่วงที่เลือกไว้ในตัวกรอง สีของแท่งแบ่งตามประเภทงานซ่อม</div>
+      <div class="chart-wrap" style="height:280px;"><canvas id="repairMonthlyStackedChart"></canvas></div>
+      <div class="repair-cat-legend-row" id="repairMonthlyLegend"></div>
+    </div>
 
+    <div class="zone4-section-head">
+      <span class="num">2</span>
+      <h3>แนวโน้มค่าซ่อมสะสมประจำปี &amp; สัดส่วนตามประเภทงานรายปี</h3>
+      <span class="en" id="zone4Section2Range">YTD Annual Summary &amp; Category Share</span>
+    </div>
+
+    <div class="repair-ytd-section">
       <div class="repair-kpi-grid" style="margin-bottom:16px;">
         <div class="repair-kpi-card">
           <div class="label">ค่าซ่อมสะสม YTD</div>
@@ -611,13 +633,13 @@
 
       <div class="focus-grid" style="grid-template-columns: 1.3fr 1fr;">
         <div class="chart-card">
-          <h3 id="repairYtdChartTitle">ค่าซ่อมประจำเดือน (ทั้งกองรถ)</h3>
-          <div class="desc" id="repairYtdChartDesc">แสดงยอดรวมค่าซ่อมแต่ละเดือน ตั้งแต่ ม.ค. ถึงเดือนที่เลือกไว้ในตัวกรอง — ตามเงื่อนไข BU/รถ/ประเภทงาน/ศูนย์ซ่อมที่กรองอยู่</div>
+          <h3>แนวโน้มค่าซ่อมสะสมประจำปี</h3>
+          <div class="desc" id="repairYtdChartDesc">สะสมตั้งแต่ ม.ค. ถึงเดือนล่าสุดที่มีข้อมูลของปีนั้น — ไม่ตัดตามช่วงที่เลือกในตัวกรองด้านบน (ยังกรองตาม BU/รถ/ประเภทงาน/ศูนย์ซ่อมที่เลือกอยู่)</div>
           <div class="chart-wrap"><canvas id="repairYtdChart"></canvas></div>
         </div>
         <div class="chart-card">
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
-            <h3 style="margin:0;">สัดส่วนตามประเภทงานซ่อม</h3>
+            <h3 style="margin:0;">สัดส่วนตามประเภทงานซ่อม (รายปี)</h3>
             <span class="desc" id="repairDonutFilterNote" style="margin:0;"></span>
           </div>
           <div class="repair-donut-row">
@@ -2138,11 +2160,14 @@ function renderRepairZone() {
   const c = COLORS();
   const catDefs = getRepairCategoryDefs(c);
   const bu = STATE.bu;
-  const rangeMonths = new Set(monthsInRange(STATE.fromYm, STATE.toYm));
+  const rangeMonthsArr = monthsInRange(STATE.fromYm, STATE.toYm);
+  const rangeMonths = new Set(rangeMonthsArr);
   const monthRows = RAW_REPAIR.filter(r => rangeMonths.has(r.ym) && (bu === 'ALL' || r.bu === bu))
     .map(r => ({ ...r, routeId: routeIdForRepair(r), category: resolveRepairCategory(r.categoryRaw, catDefs) }));
 
   document.getElementById('repairTitle').textContent = `(${monthRows.length} รายการ)`;
+  const section1El = document.getElementById('zone4Section1Range');
+  if (section1El) section1El.textContent = `Monthly Performance & Breakdown — ${rangeLabel(STATE.fromYm, STATE.toYm)}`;
 
   // Populate vehicle/category/shop filter dropdowns once per render (cheap enough; option list rarely changes).
   const vehicleSelect = document.getElementById('repairVehicleFilter');
@@ -2190,8 +2215,68 @@ function renderRepairZone() {
   document.getElementById('repKpiShops').textContent = shopCount ? shopCount + ' แห่ง' : '-';
 
   renderRepairAccordion(filtered, topVehicle.plate);
+  renderRepairMonthlyStackedChart(filtered, rangeMonthsArr, catDefs, c);
 
   renderRepairYtdSection(c, catDefs);
+}
+
+// Section 1's monthly chart — one bar per month in the selected range,
+// stacked and colored by ประเภทงาน (job category), using the same 7
+// category colors as the Section 2 donut. Uses `filtered` (already
+// narrowed by รถ/ประเภทงาน/ศูนย์ซ่อม) so it matches the KPI cards above it.
+function renderRepairMonthlyStackedChart(filtered, rangeMonthsArr, catDefs, c) {
+  destroyChart('repairMonthlyStacked');
+  const monthLabels = rangeMonthsArr.map(m => thaiMonthShort(m));
+
+  // Category list: the known 7 defs first (stable legend order/colors),
+  // plus any category actually present that didn't match one of them
+  // (ไม่ระบุ / unrecognized text) so no cost silently disappears or gets
+  // misattributed to the wrong bucket.
+  const catByName = {};
+  catDefs.forEach(d => { catByName[d.name] = d.color; });
+  filtered.forEach(r => { if (!(r.category.name in catByName)) catByName[r.category.name] = r.category.color; });
+  const catNames = Object.keys(catByName);
+
+  // [monthIdx][catIdx] -> cost total
+  const stack = rangeMonthsArr.map(() => catNames.map(() => 0));
+  filtered.forEach(r => {
+    const mIdx = rangeMonthsArr.indexOf(r.ym);
+    const catIdx = catNames.indexOf(r.category.name);
+    if (mIdx < 0 || catIdx < 0) return;
+    stack[mIdx][catIdx] += r.cost;
+  });
+
+  const ctx = document.getElementById('repairMonthlyStackedChart').getContext('2d');
+  CHARTS.repairMonthlyStacked = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: monthLabels,
+      datasets: catNames.map((name, ci) => ({
+        label: name,
+        data: stack.map(month => month[ci]),
+        backgroundColor: catByName[name],
+        borderRadius: 4,
+        maxBarThickness: 70,
+      })),
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } },
+        y: { stacked: true, ticks: { color: c.muted, font: { size: 11 }, callback: (v) => '฿' + (v / 1000) + 'k' }, grid: { color: c.grid } },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          mode: 'index',
+          backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1,
+          callbacks: { label: (item) => (item.raw > 0 ? ` ${item.dataset.label}: ฿${fmt(item.raw, 2)}` : null) },
+        },
+      },
+    },
+  });
+  const legendEl = document.getElementById('repairMonthlyLegend');
+  if (legendEl) legendEl.innerHTML = catNames.map(name => `<span><span class="sq" style="background:${catByName[name]};"></span>${escapeHtml(name)}</span>`).join('');
 }
 
 function renderRepairAccordion(rows, hotPlate) {
@@ -2254,16 +2339,20 @@ function toggleRepairAccordion(plate) {
 // ---------------------------------------------------------------------
 const YTD_MONTH_LABELS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
+// Section 2 is deliberately independent of the month-range filter's
+// from/to — it always accumulates the whole calendar year (ม.ค. through
+// the latest month the sheet actually has data for that year), anchored to
+// the year of STATE.toYm (the latest month in whatever range is currently
+// selected). BU/รถ/ประเภทงาน/ศูนย์ซ่อม filters still apply, same as Section 1.
 function renderRepairYtdSection(c, catDefs) {
-  const rangeMonths = monthsInRange(STATE.fromYm, STATE.toYm);
-  const rangeMonthSet = new Set(rangeMonths);
   const bu = STATE.bu;
+  const year = (STATE.toYm || ALL_MONTHS[ALL_MONTHS.length - 1] || '').split('-')[0];
+  const monthsOfYear = ALL_MONTHS.filter(m => m.startsWith(year + '-'));
+  const latestMonthOfYear = monthsOfYear.length ? monthsOfYear[monthsOfYear.length - 1] : STATE.toYm;
+  const yearMonths = monthsInRange(`${year}-01`, latestMonthOfYear);
+  const yearMonthSet = new Set(yearMonths);
 
-  // Fully filter-reactive: ช่วงเดือนที่เลือก, หน่วยธุรกิจ, รถ, ประเภทงาน,
-  // ศูนย์ซ่อม all apply here, so this whole "YTD" block (KPIs, chart, donut —
-  // now really "selected range", not literally Jan-to-month) shows exactly
-  // what's selected — not a separate "always whole fleet/year" view.
-  const yearRows = RAW_REPAIR.filter(r => rangeMonthSet.has(r.ym) && (bu === 'ALL' || r.bu === bu))
+  const yearRows = RAW_REPAIR.filter(r => yearMonthSet.has(r.ym) && (bu === 'ALL' || r.bu === bu))
     .map(r => ({ ...r, category: resolveRepairCategory(r.categoryRaw, catDefs) }))
     .filter(r => {
       if (STATE.repairVehicle !== 'ALL' && r.vehicle !== STATE.repairVehicle) return false;
@@ -2271,11 +2360,11 @@ function renderRepairYtdSection(c, catDefs) {
       if (STATE.repairShop !== 'ALL' && r.shop !== STATE.repairShop) return false;
       return true;
     });
-  const monthLabels = rangeMonths.map(m => thaiMonthShort(m));
+  const monthLabels = yearMonths.map(m => thaiMonthShort(m));
 
   const monthlyTotals = new Array(monthLabels.length).fill(0);
   yearRows.forEach(r => {
-    const mIdx = rangeMonths.indexOf(r.ym);
+    const mIdx = yearMonths.indexOf(r.ym);
     if (mIdx >= 0 && mIdx < monthlyTotals.length) monthlyTotals[mIdx] += r.cost;
   });
   const ytdTotal = monthlyTotals.reduce((a, b) => a + b, 0);
@@ -2291,35 +2380,38 @@ function renderRepairYtdSection(c, catDefs) {
   document.getElementById('ytdKpiTopVehicle').textContent = topVehicleOfYear.total > 0
     ? `${topVehicleOfYear.vehicle} (฿${fmt(topVehicleOfYear.total, 2)})` : '-';
 
+  const rangeEl = document.getElementById('zone4Section2Range');
+  if (rangeEl) rangeEl.textContent = `YTD Annual Summary & Category Share — ${rangeLabel(yearMonths[0], yearMonths[yearMonths.length - 1])}`;
+
   const isSingleVehicle = STATE.repairVehicle !== 'ALL';
-  renderRepairYtdChart(c, monthLabels, monthlyTotals, isSingleVehicle ? STATE.repairVehicle : null);
+  renderRepairCumulativeChart(c, monthLabels, monthlyTotals, isSingleVehicle ? STATE.repairVehicle : null);
   renderRepairDonut(c, catDefs, isSingleVehicle ? STATE.repairVehicle : 'FLEET', yearRows);
 }
 
-// Single unified monthly bar chart — one plain (non-stacked) bar per month,
-// Jan through the selected month. No more Top3/"อื่นๆ" split: the รถ filter
-// upstream already narrows this to one vehicle when the user picks one, so
-// the chart just shows whatever total that filtered selection adds up to
-// each month.
-function renderRepairYtdChart(c, monthLabels, monthlyTotals, vehicle) {
-  document.getElementById('repairYtdChartTitle').textContent = vehicle
-    ? `ค่าซ่อมประจำเดือนของ ${vehicle}` : 'ค่าซ่อมประจำเดือน (ทั้งกองรถ)';
+// Cumulative (running-total) area line chart — Jan through the latest
+// month of the year that actually has data, independent of the
+// month-range filter. A line (not bars) reads more clearly as "สะสม".
+function renderRepairCumulativeChart(c, monthLabels, monthlyTotals, vehicle) {
   document.getElementById('repairYtdChartDesc').textContent = vehicle
-    ? `แสดงยอดค่าซ่อมของ ${vehicle} แต่ละเดือน ในช่วงเดือนที่เลือกไว้ในตัวกรอง`
-    : 'แสดงยอดรวมค่าซ่อมแต่ละเดือน ในช่วงเดือนที่เลือกไว้ในตัวกรอง — ตามเงื่อนไข BU/รถ/ประเภทงาน/ศูนย์ซ่อมที่กรองอยู่';
+    ? `สะสมค่าซ่อมของ ${vehicle} ตั้งแต่ ม.ค. ถึงเดือนล่าสุดที่มีข้อมูลของปีนั้น — ไม่ตัดตามช่วงที่เลือกในตัวกรองด้านบน`
+    : 'สะสมค่าซ่อมทั้งกองรถตั้งแต่ ม.ค. ถึงเดือนล่าสุดที่มีข้อมูลของปีนั้น — ไม่ตัดตามช่วงที่เลือกในตัวกรองด้านบน (ยังกรองตาม BU/รถ/ประเภทงาน/ศูนย์ซ่อมที่เลือกอยู่)';
+  const cumulative = monthlyTotals.reduce((acc, v, i) => { acc.push((acc[i - 1] || 0) + v); return acc; }, []);
 
   destroyChart('repairYtd');
   const ctx = document.getElementById('repairYtdChart').getContext('2d');
   CHARTS.repairYtd = new Chart(ctx, {
-    type: 'bar',
-    data: { labels: monthLabels, datasets: [{ label: 'ค่าซ่อม', data: monthlyTotals, backgroundColor: c.s1, borderRadius: 4, maxBarThickness: 40 }] },
+    type: 'line',
+    data: { labels: monthLabels, datasets: [{
+      label: 'สะสม', data: cumulative, borderColor: c.s1, borderWidth: 3, tension: 0.3, fill: true,
+      backgroundColor: color_mix_alpha(c.s1, 0.14), pointRadius: 3, pointBackgroundColor: c.s1,
+    }] },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
         tooltip: {
           backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1,
-          callbacks: { label: (item) => ` ฿${fmt(item.raw, 2)}` },
+          callbacks: { label: (item) => ` สะสม ฿${fmt(item.raw, 2)}` },
         }
       },
       scales: {
