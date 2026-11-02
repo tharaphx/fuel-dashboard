@@ -390,20 +390,36 @@
 
   .accordion-item { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px; overflow: hidden; }
   .accordion-item.hot { border-color: var(--warning); }
-  .accordion-head { display:flex; align-items:center; justify-content: space-between; gap: 12px; padding: 15px 20px; cursor: pointer; flex-wrap: wrap; }
+  .accordion-head { display:flex; align-items:center; justify-content: space-between; gap: 16px; padding: 15px 20px; cursor: pointer; flex-wrap: wrap; }
   .accordion-item.hot .accordion-head { background: color-mix(in srgb, var(--warning) 10%, transparent); }
-  .accordion-head .left { display:flex; align-items:center; gap: 10px; flex-wrap: wrap; }
+  .accordion-head .left { display:flex; align-items:center; gap: 14px; flex-wrap: wrap; }
   .accordion-head .plate { font-size: 18.5px; font-weight: 800; }
   .accordion-head .meta { font-size: 14px; color: var(--text-muted); }
-  .accordion-head .total { font-size: 19px; font-weight: 800; }
-  .accordion-arrow { transition: transform .15s; color: var(--text-muted); }
+  /* Baseline-aligned ฿ + amount so the currency glyph never sits visually
+     offset from the digits (some fonts render ฿ a touch high/low inline). */
+  .accordion-head .total { display: flex; align-items: baseline; gap: 2px; font-size: 18px; font-weight: 800; color: var(--text-primary); white-space: nowrap; }
+  .accordion-head .total .cur { font-size: 18px; font-weight: 800; color: var(--text-primary); }
+  .accordion-head .total .amt { font-size: 18px; font-weight: 800; color: var(--text-primary); }
+  .bu-badge, .hot-badge { margin: 0; }
+  .accordion-arrow { transition: transform .15s; color: var(--text-muted); flex-shrink: 0; }
   .accordion-item.open .accordion-arrow { transform: rotate(180deg); }
-  .accordion-body { border-top: 1px solid var(--border); }
-  .accordion-row { display:flex; justify-content: space-between; gap: 14px; padding: 12px 20px; border-bottom: 1px solid var(--border); }
-  .accordion-row:last-child { border-bottom: none; }
-  .accordion-row .item-name { font-size: 16px; color: var(--text-primary); }
-  .accordion-row .item-shop { font-size: 14px; color: var(--text-muted); margin-top: 3px; }
-  .accordion-row .item-cost { font-weight: 700; white-space: nowrap; }
+  .accordion-body { border-top: 1px solid var(--border); padding: 12px 20px 16px; }
+
+  /* Expanded repair items — mini-table with a clear header row, instead of
+     stacked text lines, to keep Year-Month/Description/Vendor+Category/
+     Amount scannable in columns. */
+  .repair-mini-table { width: 100%; border-collapse: collapse; background: color-mix(in srgb, var(--surface-2) 60%, transparent); border: 1px solid color-mix(in srgb, var(--border) 60%, transparent); border-radius: 10px; overflow: hidden; }
+  .repair-mini-table th { text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .02em; padding: 9px 14px; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+  .repair-mini-table th.col-amount { text-align: right; }
+  .repair-mini-table th.col-ym { width: 86px; }
+  .repair-mini-table td { padding: 10px 14px; border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent); vertical-align: top; font-size: 14.5px; }
+  .repair-mini-table tr:last-child td { border-bottom: none; }
+  .repair-mini-table .col-ym { color: var(--text-muted); font-size: 13.5px; white-space: nowrap; }
+  .repair-mini-table .col-desc { font-weight: 700; color: var(--text-primary); }
+  .repair-mini-table .col-vendor { color: var(--text-secondary); }
+  .repair-mini-table .col-vendor .shop-name { display: block; margin-bottom: 4px; }
+  .repair-mini-table .col-amount { text-align: right; font-weight: 800; color: var(--text-primary); white-space: nowrap; }
+  .repair-tag-outline { display: inline-flex; align-items: center; font-size: 12.5px; font-weight: 700; padding: 2px 9px; border-radius: 20px; background: transparent; border: 1px solid; }
 </style>
 </head>
 <body>
@@ -602,12 +618,30 @@
       </div>
     </div>
 
-    <div class="chart-card" style="margin-bottom:22px;">
-      <h3>ค่าซ่อมประจำเดือน</h3>
-      <div class="desc" id="repairMonthlyChartDesc">แสดงยอดรวมค่าซ่อมแยกเป็นรายเดือนตามช่วงที่เลือกไว้ในตัวกรอง สีของแท่งแบ่งตามประเภทงานซ่อม</div>
-      <div class="chart-wrap" style="height:280px;"><canvas id="repairMonthlyStackedChart"></canvas></div>
-      <div class="repair-cat-legend-row" id="repairMonthlyLegend"></div>
+    <div class="focus-grid" style="grid-template-columns: 1.3fr 1fr; margin-bottom:22px;">
+      <div class="chart-card">
+        <h3>ค่าซ่อมประจำเดือน</h3>
+        <div class="desc" id="repairMonthlyChartDesc">รวมค่าซ่อมทั้งช่วงที่เลือกไว้ในตัวกรองต่อคัน สีของแท่งแบ่งแบบ Stacked ตามประเภทงานซ่อม เรียงมาก → น้อย</div>
+        <div class="chart-wrap" style="height:280px;"><canvas id="repairMonthlyStackedChart"></canvas></div>
+        <div class="repair-cat-legend-row" id="repairMonthlyLegend"></div>
+      </div>
+      <div class="chart-card">
+        <h3>สัดส่วนงานซ่อม (ช่วงที่เลือก)</h3>
+        <div class="desc" id="repairSection1DonutDesc">ข้อมูลเดียวกับกราฟด้านซ้าย — ตามช่วงเดือน/BU/รถ/ประเภทงาน/ศูนย์ซ่อมที่กรองอยู่</div>
+        <div class="repair-donut-row">
+          <div class="repair-donut-wrap">
+            <canvas id="repairSection1DonutChart"></canvas>
+            <div class="repair-donut-center">
+              <div class="lbl">ทั้งหมด</div>
+              <div class="val" id="repairSection1DonutCenterValue">฿0</div>
+            </div>
+          </div>
+          <div class="repair-cat-legend" id="repairSection1DonutLegend"></div>
+        </div>
+      </div>
     </div>
+
+    <div id="repairAccordionWrap"></div>
 
     <div class="zone4-section-head">
       <span class="num">2</span>
@@ -657,7 +691,6 @@
       </div>
     </div>
 
-    <div id="repairAccordionWrap"></div>
     <div class="foot-note">"ประเภทงาน" (อะไหล่ / ค่าแรง / ยาง) จัดหมวดอัตโนมัติจากคำในชื่อรายการซ่อม อาจไม่ตรง 100% — ถ้าต้องการความแม่นยำเต็มที่ แนะนำเพิ่มคอลัมน์ "ประเภทงาน" ในชีต "ซ่อมบำรุง" โดยตรง</div>
   </section>
 
@@ -2147,6 +2180,13 @@ function resolveRepairCategory(rawText, defs) {
 function repairCatBadgeHtml(cat) {
   return `<span class="repair-tag" style="color:${cat.color};background:color-mix(in srgb, ${cat.color} 14%, transparent);">${escapeHtml(cat.name)}</span>`;
 }
+// Outline/transparent-fill variant used inside the accordion's mini-table
+// (column 3, "ศูนย์ซ่อม & ประเภทงาน") — same category color, but a bordered
+// pill with a transparent background instead of the solid-fill badge used
+// elsewhere, so it reads lighter next to the vendor name.
+function repairCatBadgeOutlineHtml(cat) {
+  return `<span class="repair-tag-outline" style="color:${cat.color};border-color:color-mix(in srgb, ${cat.color} 45%, transparent);">${escapeHtml(cat.name)}</span>`;
+}
 
 // Cross-reference each repair row's vehicle to the Route ID it ran that same
 // BU + Year-Month in the main sheet, so Zone 4 can show "Route ID (ตอนซ่อม)"
@@ -2215,18 +2255,21 @@ function renderRepairZone() {
   document.getElementById('repKpiShops').textContent = shopCount ? shopCount + ' แห่ง' : '-';
 
   renderRepairAccordion(filtered, topVehicle.plate);
-  renderRepairMonthlyStackedChart(filtered, rangeMonthsArr, catDefs, c);
+  renderRepairMonthlyStackedChart(filtered, catDefs, c);
+  renderRepairSection1Donut(filtered, catDefs, c);
 
   renderRepairYtdSection(c, catDefs);
 }
 
-// Section 1's monthly chart — one bar per month in the selected range,
-// stacked and colored by ประเภทงาน (job category), using the same 7
-// category colors as the Section 2 donut. Uses `filtered` (already
-// narrowed by รถ/ประเภทงาน/ศูนย์ซ่อม) so it matches the KPI cards above it.
-function renderRepairMonthlyStackedChart(filtered, rangeMonthsArr, catDefs, c) {
+// Section 1's chart — one bar PER VEHICLE (not per month): each bar totals
+// that vehicle's repair cost across the whole selected range, labeled with
+// its plate + Route ID, sorted highest → lowest, stacked and colored by
+// ประเภทงาน (job category) — same 7 category colors as both donuts. Uses
+// `filtered` (already narrowed by รถ/ประเภทงาน/ศูนย์ซ่อม) so it matches the
+// KPI cards above it. The side-by-side donut (รendered separately, see
+// renderRepairSection1Donut) shares this exact same filtered dataset.
+function renderRepairMonthlyStackedChart(filtered, catDefs, c) {
   destroyChart('repairMonthlyStacked');
-  const monthLabels = rangeMonthsArr.map(m => thaiMonthShort(m));
 
   // Category list: the known 7 defs first (stable legend order/colors),
   // plus any category actually present that didn't match one of them
@@ -2237,26 +2280,28 @@ function renderRepairMonthlyStackedChart(filtered, rangeMonthsArr, catDefs, c) {
   filtered.forEach(r => { if (!(r.category.name in catByName)) catByName[r.category.name] = r.category.color; });
   const catNames = Object.keys(catByName);
 
-  // [monthIdx][catIdx] -> cost total
-  const stack = rangeMonthsArr.map(() => catNames.map(() => 0));
+  // Group by vehicle (plate), keeping its Route ID and summing per category.
+  const vehicleGroups = {};
   filtered.forEach(r => {
-    const mIdx = rangeMonthsArr.indexOf(r.ym);
+    if (!vehicleGroups[r.vehicle]) vehicleGroups[r.vehicle] = { vehicle: r.vehicle, routeId: r.routeId, totals: catNames.map(() => 0), total: 0 };
+    const g = vehicleGroups[r.vehicle];
     const catIdx = catNames.indexOf(r.category.name);
-    if (mIdx < 0 || catIdx < 0) return;
-    stack[mIdx][catIdx] += r.cost;
+    if (catIdx >= 0) g.totals[catIdx] += r.cost;
+    g.total += r.cost;
   });
+  const vehicles = Object.values(vehicleGroups).sort((a, b) => b.total - a.total);
 
   const ctx = document.getElementById('repairMonthlyStackedChart').getContext('2d');
   CHARTS.repairMonthlyStacked = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: monthLabels,
+      labels: vehicles.map(v => [v.vehicle, v.routeId]),
       datasets: catNames.map((name, ci) => ({
         label: name,
-        data: stack.map(month => month[ci]),
+        data: vehicles.map(v => v.totals[ci]),
         backgroundColor: catByName[name],
         borderRadius: 4,
-        maxBarThickness: 70,
+        maxBarThickness: 48,
       })),
     },
     options: {
@@ -2277,6 +2322,47 @@ function renderRepairMonthlyStackedChart(filtered, rangeMonthsArr, catDefs, c) {
   });
   const legendEl = document.getElementById('repairMonthlyLegend');
   if (legendEl) legendEl.innerHTML = catNames.map(name => `<span><span class="sq" style="background:${catByName[name]};"></span>${escapeHtml(name)}</span>`).join('');
+}
+// Section 1's donut — job-category proportion for the exact same `filtered`
+// dataset as the per-vehicle bar chart beside it (selected range + current
+// รถ/ประเภทงาน/ศูนย์ซ่อม filters). Separate chart instance/canvas from
+// Section 2's annual donut — the two are intentionally independent.
+function renderRepairSection1Donut(filtered, catDefs, c) {
+  const totals = {};
+  const colorByName = {};
+  catDefs.forEach(d => { totals[d.name] = 0; colorByName[d.name] = d.color; });
+  filtered.forEach(r => {
+    totals[r.category.name] = (totals[r.category.name] || 0) + r.cost;
+    colorByName[r.category.name] = r.category.color;
+  });
+  const names = Object.keys(totals).filter(n => totals[n] > 0);
+  const grandTotal = names.reduce((a, n) => a + totals[n], 0);
+
+  document.getElementById('repairSection1DonutCenterValue').textContent = '฿' + fmt(grandTotal, 0);
+  const legendEl = document.getElementById('repairSection1DonutLegend');
+  if (legendEl) {
+    legendEl.innerHTML = names.length ? names.map(n => {
+      const pct = grandTotal > 0 ? fmt(100 * totals[n] / grandTotal, 1) : '0';
+      return `<div style="display:flex;align-items:center;gap:6px;font-size:12.5px;"><span style="width:9px;height:9px;border-radius:3px;background:${colorByName[n]};flex-shrink:0;"></span><span style="flex:1;min-width:0;">${escapeHtml(n)}</span><span style="color:var(--text-muted);">${pct}%</span></div>`;
+    }).join('') : `<div style="color:var(--text-muted);font-size:13px;">ไม่พบรายการซ่อมที่ตรงกับตัวกรอง</div>`;
+  }
+
+  destroyChart('repairSection1Donut');
+  const ctx = document.getElementById('repairSection1DonutChart').getContext('2d');
+  CHARTS.repairSection1Donut = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels: names, datasets: [{ data: names.map(n => totals[n]), backgroundColor: names.map(n => colorByName[n]), borderColor: c.surface, borderWidth: 2, hoverOffset: 6 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '68%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1,
+          callbacks: { label: (item) => ` ${item.label}: ฿${fmt(item.raw, 2)}` },
+        },
+      },
+    },
+  });
 }
 
 function renderRepairAccordion(rows, hotPlate) {
@@ -2302,22 +2388,29 @@ function renderRepairAccordion(rows, hotPlate) {
           <span class="bu-badge">${escapeHtml(g.bu)}</span>
           <span class="plate">${escapeHtml(plate)}</span>
           <span class="meta">Route ID: ${escapeHtml(g.routeId)} · ${g.items.length} รายการ</span>
-          ${isHot ? '<span class="hot-badge">ค่าซ่อมสูงสุด</span>' : ''}
+          ${isHot ? '<span class="hot-badge">🔴 ค่าซ่อมสูงสุด</span>' : ''}
         </div>
         <div class="left">
-          <span class="total">฿${fmt(g.total, 2)}</span>
+          <span class="total"><span class="cur">฿</span><span class="amt">${fmt(g.total, 2)}</span></span>
           <svg class="accordion-arrow" width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
         </div>
       </div>
-      ${isOpen ? `<div class="accordion-body">${g.items.map(r => `
-        <div class="accordion-row">
-          <div>
-            <div class="item-name">${escapeHtml(r.item)} ${repairCatBadgeHtml(r.category)}</div>
-            <div class="item-shop">${escapeHtml(r.shop)}</div>
-          </div>
-          <div class="item-cost">฿${fmt(r.cost, 2)}</div>
-        </div>
-      `).join('')}</div>` : ''}
+      ${isOpen ? `<div class="accordion-body"><table class="repair-mini-table">
+        <thead><tr>
+          <th class="col-ym">เดือน</th>
+          <th>รายการซ่อม</th>
+          <th>ศูนย์ซ่อม &amp; ประเภทงาน</th>
+          <th class="col-amount">จำนวนเงิน</th>
+        </tr></thead>
+        <tbody>${[...g.items].sort((a, b) => a.ym < b.ym ? -1 : a.ym > b.ym ? 1 : 0).map(r => `
+          <tr>
+            <td class="col-ym">${escapeHtml(thaiMonthShort(r.ym))} ${escapeHtml((r.ym || '').split('-')[0].slice(-2))}</td>
+            <td class="col-desc">${escapeHtml(r.item)}</td>
+            <td class="col-vendor"><span class="shop-name">${escapeHtml(r.shop)}</span>${repairCatBadgeOutlineHtml(r.category)}</td>
+            <td class="col-amount">฿${fmt(r.cost, 2)}</td>
+          </tr>
+        `).join('')}</tbody>
+      </table></div>` : ''}
     </div>`;
   }).join('');
 }
