@@ -645,7 +645,7 @@
 
     <div class="zone4-section-head">
       <span class="num">2</span>
-      <h3>แนวโน้มค่าซ่อมสะสมประจำปี &amp; สัดส่วนตามประเภทงานรายปี</h3>
+      <h3>ค่าซ่อมแต่ละเดือนภายในปี &amp; สัดส่วนตามประเภทงานรายปี</h3>
       <span class="en" id="zone4Section2Range">YTD Annual Summary &amp; Category Share</span>
     </div>
 
@@ -667,8 +667,8 @@
 
       <div class="focus-grid" style="grid-template-columns: 1.3fr 1fr;">
         <div class="chart-card">
-          <h3>แนวโน้มค่าซ่อมสะสมประจำปี</h3>
-          <div class="desc" id="repairYtdChartDesc">สะสมตั้งแต่ ม.ค. ถึงเดือนล่าสุดที่มีข้อมูลของปีนั้น — ไม่ตัดตามช่วงที่เลือกในตัวกรองด้านบน (ยังกรองตาม BU/รถ/ประเภทงาน/ศูนย์ซ่อมที่เลือกอยู่)</div>
+          <h3>ค่าซ่อมแต่ละเดือนภายในปี</h3>
+          <div class="desc" id="repairYtdChartDesc">แสดงค่าซ่อมของแต่ละเดือนแบบเดี่ยวๆ (ไม่สะสมทบยอด) ตั้งแต่ ม.ค. ถึงเดือนล่าสุดที่มีข้อมูลของปีนั้น — ไม่ตัดตามช่วงที่เลือกในตัวกรองด้านบน (ยังกรองตาม BU/รถ/ประเภทงาน/ศูนย์ซ่อมที่เลือกอยู่)</div>
           <div class="chart-wrap"><canvas id="repairYtdChart"></canvas></div>
         </div>
         <div class="chart-card">
@@ -1396,7 +1396,7 @@ function renderExceptions(rowData, c) {
   const repairVals = withLiters.map(r => r.repair);
   const repMean = avg(repairVals), repSd = stddev(repairVals);
   withLiters.filter(r => repSd > 0 && r.repair > repMean + 1.5 * repSd).sort((a, b) => b.repair - a.repair).forEach(r => {
-    alerts.push({ severity: 'critical', icon: '🔴', rule: 'ค่าซ่อมสูงผิดปกติ', routeId: r.routeId, vehicle: r.vehicle,
+    alerts.push({ severity: 'serious', icon: '🟠', rule: 'ค่าซ่อมสูงผิดปกติ', routeId: r.routeId, vehicle: r.vehicle,
       valueText: '฿' + fmt(r.repair), thresholdText: `ค่าเฉลี่ยกองรถ ฿${fmt(repMean)}` });
   });
 
@@ -1404,8 +1404,8 @@ function renderExceptions(rowData, c) {
   const gpMean = avg(gpVals), gpSd = stddev(gpVals);
   withLiters.filter(r => r.gpPerLiter < 0 || (gpSd > 0 && r.gpPerLiter < gpMean - 1.5 * gpSd)).sort((a, b) => a.gpPerLiter - b.gpPerLiter).forEach(r => {
     alerts.push({
-      severity: r.gpPerLiter < 0 ? 'critical' : 'warning',
-      icon: r.gpPerLiter < 0 ? '🔴' : '⚠️',
+      severity: r.gpPerLiter < 0 ? 'critical' : 'serious',
+      icon: r.gpPerLiter < 0 ? '🔴' : '🟠',
       rule: 'กำไรขั้นต้น/ลิตรต่ำผิดปกติ', routeId: r.routeId, vehicle: r.vehicle,
       valueText: fmt(r.gpPerLiter, 2) + ' บาท/ล.',
       thresholdText: r.gpPerLiter < 0 ? 'ติดลบ' : `ต่ำกว่าค่าเฉลี่ยกองรถอย่างมีนัยสำคัญ`,
@@ -1413,7 +1413,7 @@ function renderExceptions(rowData, c) {
   });
 
   withLiters.filter(r => r.pct !== null && r.pct <= -15).sort((a, b) => a.pct - b.pct).forEach(r => {
-    alerts.push({ severity: 'serious', icon: '🟠', rule: 'ยอดขายหดตัวจากปีก่อน', routeId: r.routeId, vehicle: r.vehicle,
+    alerts.push({ severity: 'critical', icon: '🔴', rule: 'ยอดขายหดตัวจากปีก่อน', routeId: r.routeId, vehicle: r.vehicle,
       valueText: fmt(r.pct, 1) + '%', thresholdText: 'หดตัวมากกว่า 15%' });
   });
 
@@ -2481,10 +2481,24 @@ function renderRepairYtdSection(c, catDefs) {
     });
   const monthLabels = yearMonths.map(m => thaiMonthShort(m));
 
+  // Category list (known 7 defs first, plus any ไม่ระบุ/unrecognized text
+  // actually present) — same approach as Section 1's per-vehicle chart, so
+  // this chart's stacked bar colors line up with that one and the donut.
+  const catByName = {};
+  catDefs.forEach(d => { catByName[d.name] = d.color; });
+  yearRows.forEach(r => { if (!(r.category.name in catByName)) catByName[r.category.name] = r.category.color; });
+  const catNames = Object.keys(catByName);
+
+  // [monthIdx][catIdx] -> cost, plus the flat per-month total used by the
+  // KPI cards and the bar-top value labels.
+  const monthlyStack = yearMonths.map(() => catNames.map(() => 0));
   const monthlyTotals = new Array(monthLabels.length).fill(0);
   yearRows.forEach(r => {
     const mIdx = yearMonths.indexOf(r.ym);
-    if (mIdx >= 0 && mIdx < monthlyTotals.length) monthlyTotals[mIdx] += r.cost;
+    if (mIdx < 0) return;
+    monthlyTotals[mIdx] += r.cost;
+    const catIdx = catNames.indexOf(r.category.name);
+    if (catIdx >= 0) monthlyStack[mIdx][catIdx] += r.cost;
   });
   const ytdTotal = monthlyTotals.reduce((a, b) => a + b, 0);
   const maxMonthVal = monthlyTotals.length ? Math.max(...monthlyTotals) : 0;
@@ -2503,61 +2517,53 @@ function renderRepairYtdSection(c, catDefs) {
   if (rangeEl) rangeEl.textContent = `YTD Annual Summary & Category Share — ${rangeLabel(yearMonths[0], yearMonths[yearMonths.length - 1])}`;
 
   const isSingleVehicle = STATE.repairVehicle !== 'ALL';
-  renderRepairCumulativeChart(c, monthLabels, monthlyTotals, isSingleVehicle ? STATE.repairVehicle : null);
+  renderRepairMonthlyByCategoryChart(c, monthLabels, monthlyStack, catNames, catByName, monthlyTotals, isSingleVehicle ? STATE.repairVehicle : null);
   renderRepairDonut(c, catDefs, isSingleVehicle ? STATE.repairVehicle : 'FLEET', yearRows);
 }
 
-// Cumulative (running-total) area line chart — Jan through the latest
+// Monthly (not cumulative) stacked bar chart — Jan through the latest
 // month of the year that actually has data, independent of the
-// month-range filter. A line (not bars) reads more clearly as "สะสม".
-function renderRepairCumulativeChart(c, monthLabels, monthlyTotals, vehicle) {
+// month-range filter. Replaces the earlier running-total line chart: a
+// per-month view makes it obvious at a glance which month ran unusually
+// high, which a cumulative line tends to mask. Stacked/colored by
+// ประเภทงาน, same palette as Section 1's per-vehicle chart and the donut.
+function renderRepairMonthlyByCategoryChart(c, monthLabels, monthlyStack, catNames, catByName, monthlyTotals, vehicle) {
   document.getElementById('repairYtdChartDesc').textContent = vehicle
-    ? `สะสมค่าซ่อมของ ${vehicle} ตั้งแต่ ม.ค. ถึงเดือนล่าสุดที่มีข้อมูลของปีนั้น — ไม่ตัดตามช่วงที่เลือกในตัวกรองด้านบน`
-    : 'สะสมค่าซ่อมทั้งกองรถตั้งแต่ ม.ค. ถึงเดือนล่าสุดที่มีข้อมูลของปีนั้น — ไม่ตัดตามช่วงที่เลือกในตัวกรองด้านบน (ยังกรองตาม BU/รถ/ประเภทงาน/ศูนย์ซ่อมที่เลือกอยู่)';
-  const cumulative = monthlyTotals.reduce((acc, v, i) => { acc.push((acc[i - 1] || 0) + v); return acc; }, []);
+    ? `ค่าซ่อมของ ${vehicle} แยกเป็นรายเดือน ตั้งแต่ ม.ค. ถึงเดือนล่าสุดที่มีข้อมูลของปีนั้น — ไม่ตัดตามช่วงที่เลือกในตัวกรองด้านบน`
+    : 'ค่าซ่อมทั้งกองรถแยกเป็นรายเดือน ตั้งแต่ ม.ค. ถึงเดือนล่าสุดที่มีข้อมูลของปีนั้น — ไม่ตัดตามช่วงที่เลือกในตัวกรองด้านบน (ยังกรองตาม BU/รถ/ประเภทงาน/ศูนย์ซ่อมที่เลือกอยู่) สีของแท่งแบ่งตามประเภทงานซ่อม';
 
   destroyChart('repairYtd');
   const ctx = document.getElementById('repairYtdChart').getContext('2d');
   CHARTS.repairYtd = new Chart(ctx, {
-    type: 'line',
-    data: { labels: monthLabels, datasets: [{
-      label: 'สะสม', data: cumulative, borderColor: c.s1, borderWidth: 3, tension: 0.3, fill: true,
-      backgroundColor: color_mix_alpha(c.s1, 0.14), pointRadius: 3, pointBackgroundColor: c.s1,
-    }] },
+    type: 'bar',
+    data: {
+      labels: monthLabels,
+      datasets: catNames.map((name, ci) => ({
+        label: name,
+        data: monthlyStack.map(month => month[ci]),
+        backgroundColor: catByName[name],
+        borderRadius: 4,
+        maxBarThickness: 46,
+      })),
+    },
     options: {
       responsive: true, maintainAspectRatio: false,
       layout: { padding: { top: 22 } },
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } },
+        y: { stacked: true, ticks: { color: c.muted, font: { size: 11 }, callback: (v) => fmtAbbrevMK(v, '฿') }, grid: { color: c.grid } },
+      },
       plugins: {
         legend: { display: false },
         tooltip: {
+          mode: 'index',
           backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1,
-          callbacks: { label: (item) => ` สะสม ฿${fmt(item.raw, 2)}` },
-        }
+          callbacks: { label: (item) => (item.raw > 0 ? ` ${item.dataset.label}: ฿${fmt(item.raw, 2)}` : null) },
+        },
       },
-      scales: {
-        x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } },
-        y: { ticks: { color: c.muted, font: { size: 11 }, callback: (v) => fmtAbbrevMK(v, '฿') }, grid: { color: c.grid } }
-      }
     },
-    plugins: [lineValueLabelsPlugin(cumulative, (v) => fmtAbbrevMK(v, '฿'), c.text)],
+    plugins: [stackedTotalLabelsPlugin(monthlyTotals, (v) => fmtAbbrevMK(v, '฿'), c.text)],
   });
-}
-// Value label drawn above each point on the cumulative line.
-function lineValueLabelsPlugin(data, fmtFn, color) {
-  return {
-    id: 'lineValueLabels_' + Math.random().toString(36).slice(2),
-    afterDatasetsDraw(chart) {
-      const { ctx } = chart;
-      const meta = chart.getDatasetMeta(0);
-      if (!meta) return;
-      ctx.save();
-      ctx.font = '700 11px Prompt, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillStyle = color;
-      meta.data.forEach((point, i) => { if (data[i]) ctx.fillText(fmtFn(data[i]), point.x, point.y - 10); });
-      ctx.restore();
-    },
-  };
 }
 
 function renderRepairDonut(c, catDefs, view, viewRows) {
