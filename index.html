@@ -1828,6 +1828,8 @@ function custRouteLabel(g) {
 }
 function custRouteLabelPlain(g) { return g.customerName ? `${g.customerName} (${g.routeId})` : g.routeId; }
 
+let LAST_CUST_TYPE_TOTALS = []; // grouped by route, filtered by BU/time/ประเภทลูกค้า only (not yet by Route ID) — used as the Route ID dropdown's option list and as the "whole base" denominator for Card 4 when a single route is selected.
+
 function renderCustomerZone(c) {
   const bu = STATE.bu;
   const months = monthsInRange(STATE.fromYm, STATE.toYm);
@@ -1846,18 +1848,14 @@ function renderCustomerZone(c) {
     typeSelect.dataset.count = allTypes.length;
   }
 
-  const filtered = rangeFiltered.filter(r => STATE.custType === 'ALL' || r.customerType === STATE.custType);
-  LAST_CUST_FILTERED_SALES = filtered;
-  LAST_CUST_TOTALS = groupSalesByRoute(filtered);
+  const typeFiltered = rangeFiltered.filter(r => STATE.custType === 'ALL' || r.customerType === STATE.custType);
+  LAST_CUST_TYPE_TOTALS = groupSalesByRoute(typeFiltered);
 
-  document.getElementById('custTitle').textContent = `(${STATE.custType === 'ALL' ? 'ทุกประเภทลูกค้า' : STATE.custType} · ${LAST_CUST_TOTALS.length} เส้นทาง/ลูกค้า)`;
-
-  // Populate the Route ID dropdown from whatever routes are present in the
-  // current BU/time-range/ประเภทลูกค้า filter (same "only rebuild when the
-  // option count changes" trick used by Zone 4's รถ/ประเภทงาน/ศูนย์ซ่อม
-  // dropdowns, so the user's current selection isn't clobbered on every render).
+  // Route ID dropdown — options from BU/time/ประเภทลูกค้า only (not yet
+  // narrowed by the Route ID filter itself, otherwise the list would shrink
+  // to 1 option the moment something was selected).
   const routeSelect = document.getElementById('custRouteFilter');
-  const sortedRoutes = [...LAST_CUST_TOTALS].sort((a, b) => a.routeId.localeCompare(b.routeId));
+  const sortedRoutes = [...LAST_CUST_TYPE_TOTALS].sort((a, b) => a.routeId.localeCompare(b.routeId));
   if (routeSelect.dataset.count != sortedRoutes.length) {
     routeSelect.innerHTML = '<option value="ALL">ทั้งหมด</option>' +
       sortedRoutes.map(g => `<option value="${escapeHtml(g.routeId)}">${escapeHtml(custRouteLabelPlain(g))}</option>`).join('');
@@ -1866,7 +1864,17 @@ function renderCustomerZone(c) {
     routeSelect.dataset.count = sortedRoutes.length;
   }
 
-  document.getElementById('custZoneStatus').textContent = (!filtered.length && RAW_SALES.length) ? 'ไม่พบข้อมูลลูกค้าในช่วงเวลา/BU/ประเภทลูกค้าที่เลือกอยู่' : '';
+  // Final dataset for every card — actually narrowed by the selected Route
+  // ID (not just highlighted), so picking one analyzes that customer alone.
+  const filtered = STATE.custRoute === 'ALL' ? typeFiltered : typeFiltered.filter(r => r.routeId === STATE.custRoute);
+  LAST_CUST_FILTERED_SALES = filtered;
+  LAST_CUST_TOTALS = groupSalesByRoute(filtered);
+
+  const typeLabel = STATE.custType === 'ALL' ? 'ทุกประเภทลูกค้า' : STATE.custType;
+  const routeLabel = STATE.custRoute === 'ALL' ? '' : ` · ${custRouteLabelPlain(LAST_CUST_TOTALS[0] || { routeId: STATE.custRoute, customerName: '' })}`;
+  document.getElementById('custTitle').textContent = `(${typeLabel}${routeLabel} · ${LAST_CUST_TOTALS.length} เส้นทาง/ลูกค้า)`;
+
+  document.getElementById('custZoneStatus').textContent = (!filtered.length && RAW_SALES.length) ? 'ไม่พบข้อมูลลูกค้าในช่วงเวลา/BU/ประเภทลูกค้า/Route ID ที่เลือกอยู่' : '';
 
   renderCustomerTop5();
   renderCustomerTrend(months, c);
@@ -1875,9 +1883,9 @@ function renderCustomerZone(c) {
 }
 
 // Card 1 — Top 5 ลูกค้า: ranked table, 3 metrics side by side, sortable via
-// the "เรียงตาม" toggle (STATE.custSort). Always ranks across every route
-// (not narrowed by STATE.custRoute) — picking a specific route only adds a
-// highlighted row for it if it isn't already in the Top 5.
+// the "เรียงตาม" toggle (STATE.custSort). Ranks whatever LAST_CUST_TOTALS
+// currently holds — every route when STATE.custRoute is "ทั้งหมด", or just
+// the one selected route (a single row) when a specific Route ID is picked.
 function renderCustomerTop5() {
   const tbody = document.querySelector('#custTop5Table tbody');
   if (!LAST_CUST_TOTALS.length) {
@@ -1886,36 +1894,27 @@ function renderCustomerTop5() {
   }
   const sorted = [...LAST_CUST_TOTALS].sort((a, b) => b[STATE.custSort] - a[STATE.custSort]);
   const top5 = sorted.slice(0, 5);
-  const selectedInTop5 = STATE.custRoute === 'ALL' || top5.some(g => g.routeId === STATE.custRoute);
-  const rowHtml = (g, i, rankOverride) => `
-    <tr class="${STATE.custRoute === g.routeId ? 'cust-highlight' : ''}">
-      <td><span class="cust-rank-pill ${i === 0 && !rankOverride ? 'top1' : ''}">${rankOverride || (i + 1)}</span>${custRouteLabel(g)}</td>
+  tbody.innerHTML = top5.map((g, i) => `
+    <tr>
+      <td><span class="cust-rank-pill ${i === 0 ? 'top1' : ''}">${i + 1}</span>${custRouteLabel(g)}</td>
       <td>${fmt(g.liters)}</td>
       <td>฿${fmt(g.value)}</td>
       <td>฿${fmt(g.gp)}</td>
-    </tr>`;
-  let html = top5.map((g, i) => rowHtml(g, i)).join('');
-  if (!selectedInTop5) {
-    const rank = sorted.findIndex(g => g.routeId === STATE.custRoute) + 1;
-    html += rowHtml(sorted[rank - 1], rank - 1, rank);
-  }
-  tbody.innerHTML = html;
+    </tr>`).join('');
 }
 
-// Card 2 — แนวโน้มการซื้อ: monthly liters (bars) + มูลค่า (line), either
-// company-wide (STATE.custRoute === 'ALL') or narrowed to one route.
+// Card 2 — แนวโน้มการซื้อ: monthly liters (bars) + มูลค่า (line) of whatever
+// LAST_CUST_FILTERED_SALES currently holds (company-wide, or one route).
 function renderCustomerTrend(months, c) {
   destroyChart('custTrendChart');
-  const rows = STATE.custRoute === 'ALL' ? LAST_CUST_FILTERED_SALES : LAST_CUST_FILTERED_SALES.filter(r => r.routeId === STATE.custRoute);
   const byMonth = {};
   months.forEach(m => { byMonth[m] = { liters: 0, value: 0 }; });
-  rows.forEach(r => { if (byMonth[r.ym]) { byMonth[r.ym].liters += r.liters; byMonth[r.ym].value += r.value; } });
-  const selectedGroup = STATE.custRoute === 'ALL' ? null : LAST_CUST_TOTALS.find(g => g.routeId === STATE.custRoute);
+  LAST_CUST_FILTERED_SALES.forEach(r => { if (byMonth[r.ym]) { byMonth[r.ym].liters += r.liters; byMonth[r.ym].value += r.value; } });
   document.getElementById('custTrendTitle').textContent = STATE.custRoute === 'ALL'
     ? 'แนวโน้มการซื้อ — ทั้งหมด'
-    : `แนวโน้มการซื้อ — ${selectedGroup ? custRouteLabelPlain(selectedGroup) : STATE.custRoute}`;
+    : `แนวโน้มการซื้อ — ${custRouteLabelPlain(LAST_CUST_TOTALS[0] || { routeId: STATE.custRoute, customerName: '' })}`;
   document.getElementById('custTrendDesc').textContent = STATE.custRoute === 'ALL'
-    ? 'รายเดือน · ลิตร (แท่ง) และมูลค่า (เส้น) · รวมทุกเส้นทางตามตัวกรอง BU ปัจจุบัน'
+    ? 'รายเดือน · ลิตร (แท่ง) และมูลค่า (เส้น) · รวมทุกเส้นทางตามตัวกรอง BU/ประเภทลูกค้าปัจจุบัน'
     : 'รายเดือน · ลิตร (แท่ง) และมูลค่า (เส้น) · เฉพาะเส้นทางนี้';
   CHARTS.custTrendChart = new Chart(document.getElementById('custTrendChart'), {
     data: {
@@ -1937,9 +1936,10 @@ function renderCustomerTrend(months, c) {
 }
 
 // Card 3 — ความถี่ในการซื้อ: ranked horizontal bars of avg days-between-
-// purchases (shorter bar = buys more often). Routes with < 2 purchase
-// events in the current filter can't produce a gap and are excluded, with a
-// count noted below the chart so the omission isn't silent.
+// purchases (shorter bar = buys more often), over whatever LAST_CUST_TOTALS
+// currently holds. Routes/customers with < 2 purchase events in the current
+// filter can't produce a gap and are excluded, with a count noted below the
+// chart so the omission isn't silent.
 function renderCustomerFreq(c) {
   destroyChart('custFreqChart');
   const withFreq = LAST_CUST_TOTALS
@@ -1955,7 +1955,7 @@ function renderCustomerFreq(c) {
     type: 'bar',
     data: {
       labels: withFreq.map(g => custRouteLabelPlain(g)),
-      datasets: [{ data: withFreq.map(g => Math.round(g.gap * 10) / 10), backgroundColor: withFreq.map(g => g.routeId === STATE.custRoute ? c.s1 : color_mix_alpha(c.s1, 0.35)), borderRadius: 4 }],
+      datasets: [{ data: withFreq.map(g => Math.round(g.gap * 10) / 10), backgroundColor: color_mix_alpha(c.s1, 0.55), borderRadius: 4 }],
     },
     options: {
       indexAxis: 'y', responsive: true, maintainAspectRatio: false,
@@ -1968,35 +1968,44 @@ function renderCustomerFreq(c) {
   });
 }
 
-// Card 4 — สัดส่วน % ยอดขาย: donut by มูลค่า (Top 5 + "อื่นๆ"), same base
-// grouping as Card 1. Picking a specific route explodes/highlights that
-// route's slice and switches the center label to its own % share.
+// Card 4 — สัดส่วน % ยอดขาย: donut by มูลค่า.
+// STATE.custRoute === 'ALL': Top 5 + "อื่นๆ" breakdown across every route
+// (within the current BU/time/ประเภทลูกค้า filter), same as before.
+// A specific route selected: a 2-slice "เส้นทางนี้ vs ลูกค้าอื่นๆ" comparison
+// against LAST_CUST_TYPE_TOTALS (the broader base before the Route ID filter
+// narrowed it) — a single 100% slice of just that route wouldn't say anything
+// useful, so the % shown is this customer's real share of the filtered base.
 function renderCustomerShare(c) {
   destroyChart('custShareDonut');
-  const totalValue = LAST_CUST_TOTALS.reduce((a, g) => a + g.value, 0) || 1;
-  const sorted = [...LAST_CUST_TOTALS].sort((a, b) => b.value - a.value);
-  const top5 = sorted.slice(0, 5);
-  const restSum = sorted.slice(5).reduce((a, g) => a + g.value, 0);
   const palette = [c.s1, c.s2, c.s3, c.s4, c.s5, c.s6, c.s7];
-  const labels = top5.map(g => custRouteLabelPlain(g)).concat(restSum > 0 ? ['อื่นๆ'] : []);
-  const routeIds = top5.map(g => g.routeId).concat(restSum > 0 ? [null] : []);
-  const data = top5.map(g => g.value).concat(restSum > 0 ? [restSum] : []);
-  const colors = top5.map((_, i) => palette[i % palette.length]).concat(restSum > 0 ? [c.muted] : []);
-  const offsets = routeIds.map(id => id === STATE.custRoute ? 18 : 0);
+  let labels, data, colors, totalValue;
 
-  document.getElementById('custShareTitle').textContent = STATE.custRoute === 'ALL' ? 'สัดส่วน % ยอดขาย (ตามมูลค่า)' : `สัดส่วน % ยอดขาย — เน้น ${STATE.custRoute}`;
-  if (STATE.custRoute !== 'ALL') {
-    const g = LAST_CUST_TOTALS.find(g => g.routeId === STATE.custRoute);
-    document.getElementById('custShareCenterLbl').textContent = STATE.custRoute;
-    document.getElementById('custShareCenterVal').textContent = g ? (100 * g.value / totalValue).toFixed(1) + '%' : '-';
-  } else {
+  if (STATE.custRoute === 'ALL') {
+    totalValue = LAST_CUST_TOTALS.reduce((a, g) => a + g.value, 0) || 1;
+    const sorted = [...LAST_CUST_TOTALS].sort((a, b) => b.value - a.value);
+    const top5 = sorted.slice(0, 5);
+    const restSum = sorted.slice(5).reduce((a, g) => a + g.value, 0);
+    labels = top5.map(g => custRouteLabelPlain(g)).concat(restSum > 0 ? ['อื่นๆ'] : []);
+    data = top5.map(g => g.value).concat(restSum > 0 ? [restSum] : []);
+    colors = top5.map((_, i) => palette[i % palette.length]).concat(restSum > 0 ? [c.muted] : []);
+    document.getElementById('custShareTitle').textContent = 'สัดส่วน % ยอดขาย (ตามมูลค่า)';
     document.getElementById('custShareCenterLbl').textContent = 'ยอดขายรวม';
     document.getElementById('custShareCenterVal').textContent = '฿' + fmt(totalValue === 1 && !LAST_CUST_TOTALS.length ? 0 : totalValue);
+  } else {
+    const g = LAST_CUST_TOTALS[0];
+    totalValue = LAST_CUST_TYPE_TOTALS.reduce((a, r) => a + r.value, 0) || 1;
+    const thisValue = g ? g.value : 0;
+    labels = [custRouteLabelPlain(g || { routeId: STATE.custRoute, customerName: '' }), 'ลูกค้าอื่นๆ (ประเภทเดียวกัน)'];
+    data = [thisValue, Math.max(0, totalValue - thisValue)];
+    colors = [c.s1, c.muted];
+    document.getElementById('custShareTitle').textContent = `สัดส่วน % ยอดขาย — ${STATE.custRoute}`;
+    document.getElementById('custShareCenterLbl').textContent = STATE.custRoute;
+    document.getElementById('custShareCenterVal').textContent = (100 * thisValue / totalValue).toFixed(1) + '%';
   }
 
   CHARTS.custShareDonut = new Chart(document.getElementById('custShareDonut'), {
     type: 'doughnut',
-    data: { labels, datasets: [{ data, backgroundColor: colors, borderColor: c.surface, borderWidth: 2, offset: offsets }] },
+    data: { labels, datasets: [{ data, backgroundColor: colors, borderColor: c.surface, borderWidth: 2 }] },
     options: { responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: (item) => ` ${item.label}: ฿${fmt(item.raw)} (${(100 * item.raw / totalValue).toFixed(1)}%)` } } } },
   });
   document.getElementById('custShareLegend').innerHTML = labels.map((l, i) => `
